@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2B67FF36;
+  --color-primary-light: #2B67FF36;
+  --color-secondary: #380BFF36;
+  --color-gray: #9FBAFF36;
+  --color-alert: #FF424269;
+  --color-primary-card: #0646B0;
+  --color-navy: #1A2A5A;
+  --color-navy-light: #869FDE;
+  --color-accent: #5089e2;
+  --color-accent-alt: #576de3;
+  --color-pagination-active: #422EA5;
+  --color-pagination-inactive: #849bdd;
+  --color-expired: #A173A0;
+  --color-overlay: #00000089;
+  --color-text: #e2e8f0;
+  --color-chart: #3b82f6;
+  --color-table-bg: #2F52C8;
+}
+
+/* 
+:root {
+  color-scheme: dark;
+} */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: url("../assets/images/Background.png") no-repeat center center fixed;
+  background-size: cover;
+  color: var(--color-text);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Hide scrollbar for TabBar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+

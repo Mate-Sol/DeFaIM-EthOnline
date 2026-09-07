@@ -1,0 +1,225 @@
+/**
+ * DeFa theme — bright cobalt-blue gradient with frosted glass cards.
+ * Scoped to .defa-shell wrapper so it doesn't bleed into the rest of the app.
+ */
+
+.defa-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(139, 192, 255, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 80% 60%, rgba(178, 219, 255, 0.35) 0%, transparent 50%),
+    linear-gradient(135deg, #1c5dd6 0%, #2f7ff5 50%, #4ba0ff 100%);
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.defa-card {
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.10);
+}
+
+.defa-card-hover {
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.defa-card-hover:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+}
+
+.defa-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.defa-pill:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.defa-pill-active {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+}
+
+.defa-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.defa-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1c5dd6;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease;
+}
+.defa-btn-primary:hover { background: #ffffff; }
+.defa-btn-primary:active { transform: scale(0.98); }
+.defa-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.defa-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.defa-btn-ghost:hover { background: rgba(255, 255, 255, 0.18); }
+.defa-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.defa-input {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+}
+.defa-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+.defa-input:focus { border-color: rgba(255, 255, 255, 0.55); }
+
+.defa-label {
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.defa-divider {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  margin: 0;
+}
+
+/* === Marketing / landing helpers === */
+
+.defa-headline {
+  font-size: clamp(2.4rem, 5.2vw, 4.6rem);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.defa-subhead {
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.defa-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.defa-nav a {
+  text-decoration: none;
+  color: inherit;
+  padding: 6px 0;
+  position: relative;
+}
+.defa-nav a:hover { color: #fff; }
+
+.defa-coin {
+  background: radial-gradient(circle at 30% 30%, #f8fafc 0%, #cbd5e1 60%, #1e293b 100%);
+  border-radius: 9999px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.35), inset 0 -6px 14px rgba(15, 23, 42, 0.4);
+}
+
+/* Big floating sign block (for "Yield Time!" etc.) */
+.defa-sign {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5ff 100%);
+  border-radius: 22px;
+  box-shadow: 0 30px 80px rgba(28, 93, 214, 0.35), inset 0 -8px 16px rgba(28, 93, 214, 0.06);
+  color: #1c5dd6;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  position: relative;
+}
+.defa-sign::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -36px;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 70px;
+  background: linear-gradient(180deg, #f1f5ff 0%, #cbd5e1 100%);
+  border-radius: 4px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
+}
+
+/* Frosted role-chooser card on the landing page */
+.defa-role-card {
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 22px;
+  padding: 26px 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 200px;
+  text-decoration: none;
+  color: #fff;
+}
+.defa-role-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.defa-role-card .icon-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

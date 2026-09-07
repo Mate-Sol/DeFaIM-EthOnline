@@ -1,0 +1,355 @@
+@import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ── v4 theme surface ──────────────────────────────────────────────
+   Merged from:
+   - Colosseum's tailwind.config.js theme.extend (brand / status /
+     surface / shadows / animations)
+   - defa_v2/src/styles/globals.css tokens (lender-v2 palette)
+   Both portals share the same v4 theme; @apply and utility class
+   generation (bg-brand-purple, shadow-card, animate-fade-in, etc.)
+   continue to work without a JS config file.
+─────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Colosseum brand */
+  --color-brand-purple: #6298FC;
+  --color-brand-purple-dark: #507EDB;
+  --color-brand-purple-light: #5a2870;
+  --color-brand-magenta: #9e2a5b;
+  --color-brand-magenta-dark: #8e2451;
+  --color-brand-magenta-light: #ae3065;
+
+  /* Status */
+  --color-status-success: #10b981;
+  --color-status-danger:  #ef4444;
+  --color-status-warning: #f59e0b;
+  --color-status-info:    #3b82f6;
+
+  /* Surface */
+  --color-surface-dark:  #1a1a2e;
+  --color-surface:       #16213e;
+  --color-surface-light: #1f2937;
+
+  /* Container width */
+  --container-7xl: clamp(80rem, 92vw, 112rem);
+
+  /* Fonts */
+  --font-sans: 'Cabin', system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-brand:      0 4px 14px 0 rgba(74, 30, 96, 0.39);
+  --shadow-card:       0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Animations */
+  --animate-fade-in:    fadeIn 0.3s ease-in-out;
+  --animate-slide-up:   slideUp 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  /* defa_v2 lender-v2 tokens */
+  --color-primary: #2B67FF36;
+  --color-primary-light: #2B67FF36;
+  --color-secondary: #380BFF36;
+  --color-gray-custom: #9FBAFF36;
+  --color-alert: #FF424269;
+  --color-primary-card: #0646B0;
+  --color-navy: #1A2A5A;
+  --color-navy-light: #869FDE;
+  --color-accent: #5089e2;
+  --color-accent-alt: #576de3;
+  --color-pagination-active: #422EA5;
+  --color-pagination-inactive: #849bdd;
+  --color-expired: #A173A0;
+  --color-overlay: #00000089;
+  --color-text-custom: #e2e8f0;
+  --color-chart: #3b82f6;
+  --color-table-bg: #2F52C8;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes slideUp {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Base layer ─────────────────────────────────────────────────── */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Cabin', system-ui, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Component layer (Colosseum-originating classes preserved) ── */
+@layer components {
+
+  /* Brand Button */
+  .btn-brand {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300 transform;
+    background: linear-gradient(135deg, #6298FC 0%, #507EDB 100%);
+    box-shadow: 0 4px 14px 0 rgba(74, 30, 96, 0.39);
+  }
+
+  .btn-brand:hover {
+    background: linear-gradient(135deg, #4a6bd3 0%, #3f5fb5 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(74, 30, 96, 0.45);
+  }
+
+  .btn-brand:active {
+    transform: translateY(0);
+  }
+
+  .btn-brand:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300 transform;
+    box-shadow: 0 4px 14px 0 rgba(74, 30, 96, 0.39);
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(74, 30, 96, 0.45);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 border-2;
+    border-color: var(--color-brand-purple);
+    color: var(--color-brand-purple);
+    background: transparent;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-brand-purple);
+    color: white;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply bg-white rounded-xl p-6 transition-all duration-300;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .card-dark {
+    @apply rounded-xl p-6 text-white;
+    background-color: var(--color-surface-dark);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Input Styles */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:border-brand-purple transition-all duration-200;
+  }
+
+  .input-field:focus {
+    box-shadow: 0 0 0 2px rgba(98, 152, 252, 0.5);
+  }
+
+  .input-field:disabled {
+    @apply bg-gray-100 cursor-not-allowed;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  .input-error {
+    @apply border-red-500;
+  }
+
+  .input-error:focus {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+  }
+
+  /* Status Badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-success  { @apply bg-green-100  text-green-800; }
+  .badge-danger   { @apply bg-red-100    text-red-800; }
+  .badge-warning  { @apply bg-amber-100  text-amber-800; }
+  .badge-primary  { @apply bg-purple-100 text-purple-800; }
+  .badge-secondary{ @apply bg-gray-100   text-gray-800; }
+  .badge-info     { @apply bg-blue-100   text-blue-800; }
+
+  /* Sidebar Styles */
+  .sidebar {
+    background: linear-gradient(135deg, #6298FC 0%, #507EDB 100%);
+    @apply h-screen w-64 fixed left-0 top-0 text-white z-50 flex flex-col;
+  }
+
+  .sidebar nav {
+    @apply flex-1 overflow-y-auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-white/80 hover:text-white hover:bg-white/10;
+  }
+
+  .sidebar-link.active {
+    @apply bg-white/20 text-white;
+  }
+
+  /* Table Styles */
+  .table-container {
+    @apply bg-white rounded-xl overflow-hidden;
+    box-shadow: var(--shadow-card);
+  }
+
+  .table-header {
+    @apply bg-gray-50 text-gray-600 text-sm font-semibold uppercase tracking-wider;
+  }
+
+  .table-row {
+    @apply border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150;
+  }
+
+  .table-cell {
+    @apply px-6 py-4 text-sm text-gray-700;
+  }
+
+  /* Modal Overlay */
+  .modal-overlay {
+    @apply fixed inset-0 flex items-center justify-center z-50;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-content {
+    @apply bg-white rounded-2xl max-w-lg w-full mx-4;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease-out;
+  }
+
+  /* Gauge Chart Container */
+  .gauge-container {
+    @apply relative flex items-center justify-center;
+  }
+
+  /* Page Header */
+  .page-header {
+    @apply text-2xl font-bold text-gray-900 mb-6;
+  }
+
+  /* Stats Card — inlined "card" instead of `@apply card`; Tailwind v4's
+     @apply doesn't let one component class reference another. */
+  .stats-card {
+    @apply bg-white rounded-xl p-6 transition-all duration-300 flex flex-col;
+    box-shadow: var(--shadow-card);
+  }
+  .stats-card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .stats-value {
+    @apply text-3xl font-bold text-gray-900;
+  }
+
+  .stats-label {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* Gradient Text */
+  .text-gradient {
+    background: linear-gradient(135deg, #6298FC 0%, #507EDB 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* ── Utility layer ──────────────────────────────────────────────── */
+@layer utilities {
+  /* Custom scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* No-scrollbar (used by TabBar in defa_v2 lender-v2) */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Glass effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Animated background */
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 8s ease infinite;
+  }
+
+  @keyframes gradient {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}
