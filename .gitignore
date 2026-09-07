@@ -29,3 +29,6 @@ subgraph/build/
 
 # Vite build output
 web/*/dist/
+
+# Seed run state (contains live pool addresses per environment)
+contracts/script/.seed-state
