@@ -13,7 +13,7 @@
  *
  * Auth model:
  *   /lender/* — JWT.kind === 'lender'. Uses req.user.wallet directly.
- *   /psp/*    — JWT.role === 'PSP'. Uses PSPProfile.solanaWallet (field
+ *   /psp/*    — JWT.role === 'PSP'. Uses PSPProfile.walletAddress (field
  *               name preserved; stored value is now a 0x… EVM address).
  *   /admin/*  — JWT.role in {KAM, CAD, CRO, CFO, ...} OR onchain-admin
  *               allowlist for MULTISIG-gated writes.
@@ -42,11 +42,11 @@ const PoolNameOverride = require('../models/PoolNameOverride');
 // ── Helpers ────────────────────────────────────────────────────────────
 
 /**
- * Field-name alias: the Mongo schemas still call these `solanaWallet` /
+ * Field-name alias: the Mongo schemas still call these `walletAddress` /
  * `poolPda` from the Colosseum era. Values are now 0x… EVM addresses.
  * Aliasing here keeps the mismatch out of route bodies.
  */
-const walletOf   = (doc) => doc?.solanaWallet || doc?.evmWallet || '';
+const walletOf   = (doc) => doc?.walletAddress || doc?.evmWallet || '';
 const poolAddrOf = (doc) => doc?.poolPda || doc?.poolAddress || '';
 
 /** Cheap EIP-55 validator; returns checksummed address or null. */

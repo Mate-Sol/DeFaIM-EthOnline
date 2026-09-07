@@ -3,7 +3,7 @@
  * lifecycle events and view-getter state, mirrors into Mongo (PoolState /
  * DrawdownState collections).
  *
- * Analog of the old solanaIndexer.js, retargeted for EVM. Same output
+ * Indexes Arc pool events and view state into Mongo. Same output
  * schemas so existing /pool/* read endpoints keep working without change;
  * the payloads just source from ethers instead of Anchor now.
  *
@@ -53,9 +53,9 @@ const isRateLimited = (e) =>
   /429|too many requests|rate limit|timeout|econnreset/i.test(e?.message || '');
 
 // ── Field mapping helpers ──────────────────────────────────────────────
-// The PoolState / DrawdownState schemas were designed for Solana; we map
+// The PoolState / DrawdownState schemas predate Arc; we map
 // EVM state into semantically-equivalent fields where possible and leave
-// Solana-only fields unset. See docs/EVM_SCHEMA_MAP.md (todo) for the
+// legacy fields unset. See docs/EVM_SCHEMA_MAP.md (todo) for the
 // full mapping.
 
 // WAD (1e18) fixed-point rate -> basis points.
@@ -108,7 +108,7 @@ function poolStateToDoc(state, extras = {}) {
     outstandingPrincipal: state.outstanding.toString(),
     todayDay:             Number(state.currentDay),
 
-    // Timestamps: fold Solana `activatedDay` into JS Number of the pool
+    // Timestamps: fold `activatedDay` into JS Number of the pool
     // start ts / 86400 so downstream day-index math stays comparable.
     activatedDay: state.poolStartTs > 0n ? Number(state.poolStartTs / 86400n) : 0,
     createdDay:   state.fundingStartTs > 0n ? Number(state.fundingStartTs / 86400n) : 0,
@@ -174,7 +174,7 @@ async function tick() {
     // 2. Snapshot state for every known pool
     const knownPools = await PoolState.find({}).select('pubkey').lean();
     for (const { pubkey } of knownPools) {
-      if (!pubkey || !pubkey.startsWith('0x')) continue; // skip old Solana rows
+      if (!pubkey || !pubkey.startsWith('0x')) continue; // skip non-EVM rows
       let state;
       try {
         state = await readPoolState(pubkey);

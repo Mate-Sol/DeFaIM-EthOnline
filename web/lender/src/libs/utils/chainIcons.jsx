@@ -1,22 +1,20 @@
 import React from "react";
 import etherIcon from "@/assets/multiChain-ui/ether-icon.svg";
-import solanaIcon from "@/assets/multiChain-ui/solana-icon.svg";
 
-// Single-chain deploy — every consumer of chainOptions and getChainIcon
-// (MainHeader dropdowns, PoolList header pill, PoolDetails header, the
-// loans-page chain column, chainSlice default) should surface Polygon
-// and only Polygon. The legacy Stellar / Stark Net / Zig Chain entries
-// used to sit here for the multichain UI mock; they are gone in the
-// hackathon build.
+// Single-chain deploy. Every consumer of chainOptions and getChainIcon —
+// the header dropdown, the pool list and detail pills, the loans-page chain
+// column, and the chainSlice default — surfaces Arc and only Arc.
+//
+// The label is also sent to the marketplace API as blockChainType, so it has
+// to match what the backend indexes facilities under.
 const chainMap = {
-  arc: { label: "Solana", src: solanaIcon },
+  arc: { label: "Arc", src: etherIcon },
 };
 
 /**
  * getChainIcon — returns the icon element for a given blockchain type.
- * Any legacy key ("stellar", "starknet", "zigchain", "evm") falls back
- * to the Polygon icon so old mock rows still render an icon rather than
- * breaking the layout.
+ * Any legacy chain key falls
+ * back to Arc so old rows still render an icon rather than breaking layout.
  */
 export function getChainIcon(bcType, size = 16) {
   const chain = chainMap[bcType?.toLowerCase()] || chainMap.arc;

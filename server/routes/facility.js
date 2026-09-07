@@ -6,7 +6,7 @@ const Facility    = require('../models/Facility');
 const PSPProfile  = require('../models/PSPProfile');
 // EVM swap: on-chain admin's factory.createPool() returns the pool
 // address in the tx receipt. We can no longer pre-derive it from PSP wallet
-// + facility id (that was Solana PDA behaviour). The poolPda / vaultPda /
+// + facility id (that was PDA-derivation behaviour). The poolPda / vaultPda /
 // lpMintPda fields on Facility stay null until Onchain admin actually
 // deploys the pool and the evmIndexer picks up the PoolCreated event.
 
@@ -42,8 +42,8 @@ router.post('/facility/request', auth, async (req, res) => {
         workflowStep: profile.workflowStep,
       });
     }
-    if (!profile.solanaWallet) {
-      return res.status(400).json({ message: 'Bind a Solana wallet before requesting a facility.' });
+    if (!profile.walletAddress) {
+      return res.status(400).json({ message: 'Bind a wallet before requesting a facility.' });
     }
 
     // PSP-side request only carries the fields the borrower actually
@@ -88,7 +88,7 @@ router.post('/facility/request', auth, async (req, res) => {
 
     const facility = await Facility.create({
       pspProfileId: profile._id,
-      pspWallet:    profile.solanaWallet,
+      pspWallet:    profile.walletAddress,
       facilityId,
       label: req.body?.label || '',
       requestedTerms,
@@ -144,7 +144,7 @@ router.get('/facility/queue', auth, authorizeRoles('KAM','CAD','CRO','SUPER_ADMI
 
     const items = await Facility.find({ status })
       .sort({ requestedAt: 1 })
-      .populate('pspProfileId', 'companyName solanaWallet workflowStep');
+      .populate('pspProfileId', 'companyName walletAddress workflowStep');
     res.json({ status, items: items.map(serialize) });
   } catch (e) {
     console.error('[facility/queue]', e);
@@ -154,7 +154,7 @@ router.get('/facility/queue', auth, authorizeRoles('KAM','CAD','CRO','SUPER_ADMI
 
 router.get('/facility/:id', auth, async (req, res) => {
   try {
-    const f = await Facility.findById(req.params.id).populate('pspProfileId', 'companyName solanaWallet workflowStep');
+    const f = await Facility.findById(req.params.id).populate('pspProfileId', 'companyName walletAddress workflowStep');
     if (!f) return res.status(404).json({ message: 'Facility not found' });
     // PSPs can read only their own.
     if (req.user.role === 'PSP') {
@@ -338,7 +338,7 @@ function serialize(f) {
       ? o.pspProfileId._id.toString()
       : (o.pspProfileId ? o.pspProfileId.toString() : null),
     psp: typeof o.pspProfileId === 'object' && o.pspProfileId?.companyName
-      ? { companyName: o.pspProfileId.companyName, solanaWallet: o.pspProfileId.solanaWallet }
+      ? { companyName: o.pspProfileId.companyName, walletAddress: o.pspProfileId.walletAddress }
       : null,
     pspWallet:        o.pspWallet,
     facilityId:       o.facilityId,

@@ -16,7 +16,9 @@ const fmtUsdc = (base) => {
 };
 const todayDayIndex = () => Math.floor(Date.now() / 1000 / 86400);
 const fmtBps = (bps) => `${(Number(bps) / 100).toFixed(2)}%/d`;
-const explorer = (kind, val) => `https://explorer.solana.com/${kind}/${val}?cluster=devnet`;
+const EXPLORER_BASE = (import.meta.env.VITE_CHAIN_EXPLORER_URL || 'https://testnet.arcscan.app')
+  .replace(/\/+$/, '');
+const explorer = (kind, val) => `${EXPLORER_BASE}/${kind === 'address' ? 'address' : 'tx'}/${val}`;
 
 const FacilityDetail = () => {
   const { pool: poolPubkey } = useParams();

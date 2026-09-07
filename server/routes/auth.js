@@ -248,7 +248,7 @@ router.post('/login',
         if (profile) {
           creditLineStatus = profile.creditLineStatus;
 
-          // Off-chain expiry check via creditLineEndDate. The Solana pool's
+          // Off-chain expiry check via creditLineEndDate. The pool's
           // tenor is the authoritative source; indexer will reconcile drift.
           if (profile.creditLineEndDate && new Date(profile.creditLineEndDate) < new Date()) {
             isExpired = true;

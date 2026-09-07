@@ -12,7 +12,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@rainbow-me/rainbowkit/styles.css";
 
 // Chain config is env-driven so the SAME client code targets Anvil (dev),
-// Polygon Amoy, or Arc testnet — only .env changes.
+// Arc testnet or Arc mainnet — only .env changes.
 const CHAIN_ID = parseInt(import.meta.env.VITE_CHAIN_ID || "31337", 10);
 const RPC_URL = import.meta.env.VITE_RPC_URL || "http://127.0.0.1:8545";
 const CHAIN_NAME = import.meta.env.VITE_CHAIN_NAME || "Anvil";

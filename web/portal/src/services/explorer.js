@@ -1,16 +1,17 @@
-// Solana Explorer URL helpers. Replaces sepolia.etherscan.io / etherscan.io
-// links from the EVM era. The cluster query string is appended for non-mainnet
-// environments so links resolve to the correct network.
+// Block explorer URL helpers.
+//
+// The base URL is env-driven so the same code points at Arc Testnet during
+// development and Arc Mainnet in production; it defaults to Arc Testnet.
 
-const CLUSTER = import.meta.env.VITE_SOLANA_CLUSTER || 'devnet';
-const SUFFIX = CLUSTER === 'mainnet-beta' ? '' : `?cluster=${CLUSTER}`;
+const BASE = (import.meta.env.VITE_CHAIN_EXPLORER_URL || 'https://testnet.arcscan.app')
+  .replace(/\/+$/, '');
 
-export function txExplorerUrl(signature) {
-  if (!signature) return null;
-  return `https://explorer.solana.com/tx/${signature}${SUFFIX}`;
+export function txExplorerUrl(hash) {
+  if (!hash) return null;
+  return `${BASE}/tx/${hash}`;
 }
 
 export function addressExplorerUrl(address) {
   if (!address) return null;
-  return `https://explorer.solana.com/address/${address}${SUFFIX}`;
+  return `${BASE}/address/${address}`;
 }

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 /**
- * On-chain Pool snapshot, mirrored by `solanaIndexer` worker.
+ * On-chain pool snapshot, mirrored by the `evmIndexer` worker.
  *
  * This collection is the local cache of authoritative on-chain state. It
  * lets API endpoints respond fast without hitting RPC, and the

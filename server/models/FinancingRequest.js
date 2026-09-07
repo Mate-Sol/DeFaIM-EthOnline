@@ -16,7 +16,7 @@ const financingRequestSchema = new mongoose.Schema({
   },
 
   // Status tracking (async workflow)
-  // 'AwaitingDrawdown' was added in the Solana migration: the request was
+  // 'AwaitingDrawdown': the request was
   // approved off-chain, but the on-chain `request_drawdown` tx hasn't been
   // signed by the PSP yet. Surfaces a "Sign Drawdown" action in the UI.
   status: {
@@ -30,7 +30,7 @@ const financingRequestSchema = new mongoose.Schema({
     default: 'Pending'
   },
 
-  // ─── Solana correlation ──────────────────────────────────────────────────
+  // ─── On-chain correlation ────────────────────────────────────────────────
   // Filled in by /pool/psp/build-tx/drawdown when the PSP signs and the
   // tx confirms. The indexer uses these to correlate Drawdown PDA state
   // changes (e.g. repaid: false → true) back to the FinancingRequest.
@@ -154,7 +154,7 @@ const financingRequestSchema = new mongoose.Schema({
 
 // Virtual: calendar days elapsed between disburse and repay (or now). Kept as
 // a UX/sort helper — purely informational. Not used for fee math; the
-// Solana program is authoritative for utilization, commit, and penalty fees.
+// The pool contract is authoritative for utilization, commit and penalty fees.
 financingRequestSchema.virtual('daysElapsed').get(function () {
   if (!this.disbursedAt) return 0;
   const start = new Date(this.disbursedAt); start.setHours(0, 0, 0, 0);
@@ -172,7 +172,7 @@ financingRequestSchema.virtual('drawdownDays').get(function () {
 });
 
 // NOTE: the EVM-era `interestDays` (Full Tenure Floor) and `accruedInterest`
-// virtuals were removed in the Solana migration. The on-chain program
+// virtuals were removed when fee accrual moved on chain. The contract
 // computes utilization + commit + penalty fees automatically inside `repay`
 // and `settle_commit_fee`. Off-chain fee values come from the indexer
 // reading Pool.accrued_*_fee and from the per-repayment delta on Drawdown

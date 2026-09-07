@@ -272,7 +272,7 @@ const PSPDashboard = () => {
               </div>
 
               <div className="flex items-center gap-4">
-                {/* Settle commit fee on the PSP's pool. The Solana program
+                {/* Settle commit fee on the PSP's pool. The pool contract
                     accrues commit fee lazily on every event; if the PSP
                     repays late in the day or wants to close out, this
                     pays whatever's accrued so lenders can redeem. */}

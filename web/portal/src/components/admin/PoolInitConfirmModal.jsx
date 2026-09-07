@@ -3,7 +3,7 @@ import { X, Loader2, Zap } from 'lucide-react';
 
 /**
  * Pre-sign confirmation + override form for `initialize_pool`. Wallets like
- * Phantom only show a hex blob for Anchor instruction data, so admin can't
+ * Wallets only show a hex blob for calldata, so the admin can't
  * verify what they're authorizing from the wallet UI alone. This modal:
  *   1. Lays out every param the server will encode into the tx, derived
  *      from the PSPProfile's CRO-approved values.

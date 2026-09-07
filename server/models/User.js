@@ -45,8 +45,8 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpire: Date,
   // Bound via /auth/wallet/bind. Admin roles use this wallet to sign
   // initialize_pool / execute_facility / cancel_funding / claim_protocol_fees /
-  // declare_default. PSPs duplicate this on PSPProfile.solanaWallet.
-  solanaWallet: { type: String, default: '' },
+  // declare_default. PSPs duplicate this on PSPProfile.walletAddress.
+  walletAddress: { type: String, default: '' },
   createdAt: {
     type: Date,
     default: Date.now

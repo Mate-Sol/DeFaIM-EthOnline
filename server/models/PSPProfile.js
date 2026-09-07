@@ -177,16 +177,8 @@ const pspProfileSchema = new mongoose.Schema({
   desiredCurrencyValue: { type: String, default: "" },
   desiredBCNetwork: {
     type: String,
-    enum: [
-      "stellar",
-      "zigchain",
-      "starknet",
-      "arbitrum",
-      "ethereum",
-      "solana",
-      "",
-    ],
-    default: "",
+    enum: ["arc", ""],
+    default: "arc",
   },
   primaryCurrencyPairs: { type: String, default: "" },
   minUtilizationRate: {
@@ -219,12 +211,12 @@ const pspProfileSchema = new mongoose.Schema({
   },
 
   // Blockchain Integration
-  // `solanaWallet` is the canonical primary wallet bound during onboarding
+  // `walletAddress` is the canonical primary wallet bound during onboarding
   // and baked into the on-chain Pool PDA seed at initialize_pool. Once a
   // pool exists this field is effectively immutable — rebinding orphans
   // the pool. The legacy `walletAddress` array is preserved for code paths
   // that haven't migrated and for additional whitelisted recipient wallets.
-  solanaWallet: { type: String, default: "" },
+  walletAddress: { type: String, default: "" },
   walletAddress: {
     type: [
       {

@@ -6,7 +6,7 @@
 // Run with:  node server/scripts/wipeForMultiFacility.js
 //
 // Add --include-lenders to also wipe Lender records (forces lenders to
-// re-sign-in-with-Solana).
+// re-sign-in with their wallet).
 require('dotenv').config({ path: __dirname + '/../.env' });
 const mongoose = require('mongoose');
 

@@ -478,14 +478,7 @@ const ApplyFinancingLimit = ({
                       required
                     >
                       <option value="">Select Network</option>
-                      {[
-                        "stellar",
-                        "zigchain",
-                        "starknet",
-                        "arbitrum",
-                        "ethereum",
-                        "solana",
-                      ].map((net) => (
+                      {["arc"].map((net) => (
                         <option key={net} value={net}>
                           {net.charAt(0).toUpperCase() + net.slice(1)}
                         </option>

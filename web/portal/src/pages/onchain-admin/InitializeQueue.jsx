@@ -44,7 +44,7 @@ const InitializeQueue = () => {
 
   const handleInitialize = async (facility) => {
     if (!isConnected) { toast.error('Connect wallet first'); return; }
-    const pspWallet = facility.pspWallet || facility.psp?.solanaWallet;
+    const pspWallet = facility.pspWallet || facility.psp?.walletAddress;
     if (!pspWallet) {
       toast.error('PSP wallet not bound on this facility');
       return;
@@ -106,7 +106,7 @@ const InitializeQueue = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {items.map((f) => {
               const t = f.approvedTerms || f.requestedTerms || {};
-              const pspWallet = f.pspWallet || f.psp?.solanaWallet;
+              const pspWallet = f.pspWallet || f.psp?.walletAddress;
               return (
                 <div key={f._id} className="defa-card defa-card-hover p-6">
                   <div className="flex items-start justify-between mb-4">

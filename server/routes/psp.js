@@ -581,7 +581,7 @@ router.post("/request-financing", async (req, res) => {
       return res.status(404).json({ message: "Profile not found" });
     }
 
-    // Solana program has no admin pause concept — drawdowns are blocked
+    // The pool contract has no admin pause concept — drawdowns are blocked
     // automatically when an existing drawdown is past tenor+grace+penalty.
     // The PSP's own `request_drawdown` tx will fail in that case.
 
@@ -706,7 +706,7 @@ router.get("/pool-status", async (req, res) => {
       return res.status(404).json({ message: "No credit pool assigned" });
     }
 
-    // Pre-Solana-indexer: serve pool fields off-chain. Once the indexer ships
+    // Pre-indexer: serve pool fields off-chain. Once the indexer ships
     // (Phase 3), this returns merged Mongo + on-chain Pool/Drawdown PDA state.
     const enrichedData = {
       pending: true,

@@ -27,7 +27,7 @@ connectDB();
 // Initialize scheduled jobs (credit maintenance)
 const { initializeScheduledJobs } = require('./config/scheduler');
 const { startOverdueWatcher } = require('./workers/overdueWatcher');
-// Chunk B3c: swap Solana indexer → EVM indexer. The EVM indexer refuses
+// The Arc indexer refuses
 // to boot until PAYFI_FACTORY_ADDRESS is set (guarded start), so dev envs
 // without a deploy stay quiet instead of stack-tracing every 30s.
 const { start: startEvmIndexer } = require('./workers/evmIndexer');

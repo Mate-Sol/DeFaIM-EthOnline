@@ -125,7 +125,7 @@ export const COLUMN_OPTIONS = [
 ];
 
 // Loans preview rows for /wellcome + /loans. Hackathon build: only
-// polygon chain rendered (chain key drives the icon+label via chainIcons).
+// chain rendered (chain key drives the icon+label via chainIcons).
 // If we later wire the LoanPage to real API data, delete this array and
 // have LoanPage fetch its own rows.
 export const loansData = [

@@ -7,12 +7,12 @@
  * short, memorable code (e.g. 123456) that judges can paste.
  *
  * Run inside the backend pod:
- *   PUBLIC_DEMO_CODE=123456 PUBLIC_DEMO_LABEL="polygon-demo" \
+ *   PUBLIC_DEMO_CODE=123456 PUBLIC_DEMO_LABEL="public-demo" \
  *     node scripts/seedPublicDemoCode.js
  *
  * Or via kubectl:
  *   kubectl exec deployment/ploygon-be -n ploygon-hackathon -- \
- *     env PUBLIC_DEMO_CODE=123456 PUBLIC_DEMO_LABEL=polygon-demo \
+ *     env PUBLIC_DEMO_CODE=123456 PUBLIC_DEMO_LABEL=public-demo \
  *     node scripts/seedPublicDemoCode.js
  *
  * Safe to re-run: if the code already exists it prints "already exists"

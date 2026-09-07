@@ -1,8 +1,7 @@
 /**
  * Disbursement Agent (Background Worker)
  *
- * Solana migration note: drawdowns are now PSP-signed on-chain via the Anchor
- * program (`request_drawdown` in `solana/code/paymate-pool-v2`). The server no
+ * Drawdowns are PSP-signed on chain via the pool contract. The server no
  * longer performs the disbursement; it validates the request and transitions
  * to `AwaitingDrawdown` so the PSP portal surfaces a "Sign Drawdown" action.
  */
@@ -71,7 +70,7 @@ async function disburseFinancing(requestId) {
       return;
     }
 
-    // Solana model: PSP self-serves the drawdown. Server transitions to
+    // PSP self-serves the drawdown. Server transitions to
     // AwaitingDrawdown and notifies the PSP to sign in their portal.
     console.log(`[Disbursement Agent] Marking request as AwaitingDrawdown...`);
     console.log(`  Amount: $${request.amount}`);

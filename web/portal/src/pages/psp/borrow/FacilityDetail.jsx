@@ -19,10 +19,9 @@ const fmt = (base) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(usd);
 };
 const fmtBps = (bps) => `${Number(bps)}bps/d`;
-// Polygon Amoy explorer. If EVM_EXPLORER_URL becomes configurable per env
-// we can lift this to VITE_CHAIN_EXPLORER_URL, but for the hackathon it's
-// baked to Amoy.
-const explorer = (kind, val) => `https://testnet.arcscan.app/${kind === 'tx' ? 'tx' : kind === 'address' ? 'address' : 'tx'}/${val}`;
+const EXPLORER_BASE = (import.meta.env.VITE_CHAIN_EXPLORER_URL || 'https://testnet.arcscan.app')
+  .replace(/\/+$/, '');
+const explorer = (kind, val) => `${EXPLORER_BASE}/${kind === 'address' ? 'address' : 'tx'}/${val}`;
 const todayDayIndex = () => Math.floor(Date.now() / 1000 / 86400);
 
 const FacilityDetail = () => {

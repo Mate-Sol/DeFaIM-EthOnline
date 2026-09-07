@@ -43,11 +43,11 @@ const authMiddleware = async (req, res, next) => {
       name: user.name,
       role: user.role,
       // Expose the wallet bound to this user so poolTx.requireOnchainAdmin
-      // can gate on it. Field name is `solanaWallet` for legacy reasons —
+      // can gate on it. Field name is `walletAddress` for legacy reasons —
       // its value is a 20-byte EVM address in prod. Undefined for
       // password-only users; that's fine, requireOnchainAdmin also runs
       // isOnchainAdmin() which rejects empty.
-      wallet: user.solanaWallet || undefined,
+      wallet: user.walletAddress || undefined,
     };
     next();
   } catch (error) {

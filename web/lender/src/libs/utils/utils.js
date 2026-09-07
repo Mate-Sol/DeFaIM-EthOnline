@@ -112,14 +112,8 @@ export const validateWalletMatch = (walletAddress) => {
   }
 
   // Regex for formats
-  const starknetRegex = /^0x[a-fA-F0-9]{60,66}$/;
-  const stellarRegex = /^G[A-Z2-7]{55}$/;
-  const zigchainRegex = /^zig1[a-z0-9]{38}$/;
   // detect type
   const getType = (address) => {
-    if (starknetRegex.test(address)) return "Starknet";
-    if (stellarRegex.test(address)) return "Stellar";
-    if (zigchainRegex.test(address)) return "ZigChain";
     return "Unknown";
   };
 

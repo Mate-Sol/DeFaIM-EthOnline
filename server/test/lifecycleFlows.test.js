@@ -104,7 +104,7 @@ async function setPSPProfileToFinalized(userId, wallet) {
   const { insertedId } = await db.collection('pspprofiles').insertOne({
     userId: uid,
     workflowStep: 'FINALIZED',
-    solanaWallet: wallet,
+    walletAddress: wallet,
     walletAddress: [{ address: wallet, name: 'Primary Wallet' }],
     companyName: `PSP Co ${RUN_ID}`,
     nextFacilityId: 1,
@@ -120,7 +120,7 @@ async function markOnchainAdminUser(userId) {
   const { client, db } = await mongo();
   await db.collection('users').updateOne(
     { _id: (await require('mongodb').ObjectId.createFromHexString(userId)) },
-    { $set: { role: 'ONCHAIN_ADMIN', solanaWallet: state.onchain.wallet } }
+    { $set: { role: 'ONCHAIN_ADMIN', walletAddress: state.onchain.wallet } }
   );
   await client.close();
 }

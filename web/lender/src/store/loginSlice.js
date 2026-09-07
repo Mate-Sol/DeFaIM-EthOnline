@@ -1,8 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-// Single-chain Redux slice for the authenticated lender. Legacy Solana /
-// Stellar branches (getUsdcBalance shim, getUserTokensBlances thunk) were
-// removed alongside the deprecated /stellar helper module — on-chain USDC
+// Single-chain Redux slice for the authenticated lender. The multi-chain
+// balance branches (getUsdcBalance shim, getUserTokensBlances thunk) were
+// removed along with the helper modules they used — on-chain USDC
 // balance is now read via wagmi hooks in the pages that need it.
 
 const initialState = {

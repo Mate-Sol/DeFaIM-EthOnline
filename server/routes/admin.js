@@ -914,18 +914,18 @@ router.post('/applications/:id/approve', authorizeRoles('CRO', 'CAD'), async (re
     }
 
     if (req.user.role === 'CRO' && profile.workflowStep === 'CRO_FINAL_CONFIRMATION') {
-      // CRO performs final confirmation. Under the Solana model the on-chain
+      // CRO performs final confirmation. The on-chain
       // pool is initialized by an admin-signed `initialize_pool` tx from the
       // admin portal, not by the server. This handler captures all approval
       // parameters, derives the PDAs that the future pool will live at, and
       // transitions the workflow to AWAITING_POOL_INIT so the admin dashboard
       // surfaces a "Initialize Pool" action.
 
-      // PSP must have bound a Solana wallet — that's what gets baked into the
+      // PSP must have bound a wallet — that's what gets baked into the
       // pool PDA seed. Without it we can't even pre-derive addresses.
-      if (!profile.solanaWallet) {
+      if (!profile.walletAddress) {
         return res.status(409).json({
-          message: 'PSP has not bound a Solana wallet yet — cannot derive pool PDA',
+          message: 'PSP has not bound a wallet yet — cannot create the pool',
         });
       }
 
@@ -1495,10 +1495,10 @@ const { calculateTotalExposure } = require('../services/interestCalculator');
 const Segment = require('../models/Segment');
 const { default: axios } = require('axios');
 
-// ─── Pool management routes removed in Solana migration ────────────────
+// ─── Pool management routes removed when settlement moved on chain ─────
 //
 // The following endpoints existed for the EVM model where the admin pulled
-// PSP repayments into the pool and recorded fees. In the Solana model:
+// PSP repayments into the pool and recorded fees. On chain:
 //   - PSPs repay directly via `repay` (signs their own tx).
 //   - Fees (util / commit / penalty) are computed automatically by the
 //     program; there is no manual `recordFeeRepayment`.
@@ -1508,7 +1508,7 @@ const { default: axios } = require('axios');
 //     using peak-outstanding-during-day, accrued lazily on every event.
 //
 // Removed routes (any frontend caller should be updated to read on-chain
-// state via the indexer or call new Solana endpoints once Phase 3 ships):
+// state via the indexer):
 //   POST /pools/:id/replenish
 //   POST /pools/:id/replenish-fees
 //   POST /pools/:id/trigger-penalty

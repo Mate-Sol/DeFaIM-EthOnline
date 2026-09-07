@@ -4,7 +4,7 @@
  * Polls every hour for disbursed financing requests that are past due.
  * Sends due-soon and overdue notifications.
  *
- * Solana migration note: penalty fees are now computed automatically by the
+ * Penalty fees are computed automatically by the
  * Anchor program inside `repay` (utilization rate for grace day, then penalty
  * rate per day after). There is no on-chain pause concept — the program blocks
  * new drawdowns while any prior drawdown is past `tenor + grace + penalty`
@@ -144,7 +144,7 @@ async function checkRequestAlerts(request, psp) {
         }
       }
 
-      // Auto-pause threshold → admin alert. The Solana program has no pause
+      // Auto-pause threshold → admin alert. The pool contract has no pause
       // instruction; the contract blocks new draws automatically once a
       // drawdown is past tenor+grace+penalty, so the operational signal here
       // is "alert admin" rather than "call pausePool".

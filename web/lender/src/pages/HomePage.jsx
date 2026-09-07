@@ -170,9 +170,7 @@ export function HomePage() {
                       </ModularTableRow>
                     </ModularTableHead>
                     <ModularTableBody>
-                      <ModularTableRow><ModularTableCell>Ethereum</ModularTableCell><ModularTableCell align="right">$2,450</ModularTableCell></ModularTableRow>
-                      <ModularTableRow><ModularTableCell>Solana</ModularTableCell><ModularTableCell align="right">$145</ModularTableCell></ModularTableRow>
-                      <ModularTableRow><ModularTableCell>Polygon</ModularTableCell><ModularTableCell align="right">$0.65</ModularTableCell></ModularTableRow>
+                      <ModularTableRow><ModularTableCell>USDC</ModularTableCell><ModularTableCell align="right">$1.00</ModularTableCell></ModularTableRow>
                     </ModularTableBody>
                   </ModularTable>
                 </ModularTableContainer>

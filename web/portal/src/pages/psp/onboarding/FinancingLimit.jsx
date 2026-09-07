@@ -149,7 +149,7 @@ const FinancingLimitTab = ({ profile }) => {
              </div>
            </div>
            <a 
-            href={`https://stellar.expert/explorer/testnet/account/${profile.assignedPoolAddress}`}
+            href={`${import.meta.env.VITE_CHAIN_EXPLORER_URL || 'https://testnet.arcscan.app'}/address/${profile.assignedPoolAddress}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-brand-purple text-xs font-bold hover:underline"

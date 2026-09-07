@@ -27,7 +27,7 @@ const Register = () => {
   useEffect(() => {
     if (!authUser) return;
     pspAPI.getProfile?.().then((res) => {
-      if (res?.data?.solanaWallet) setBoundWallet(res.data.solanaWallet);
+      if (res?.data?.walletAddress) setBoundWallet(res.data.walletAddress);
     }).catch(() => {});
   }, [authUser?.id]);
   const [formData, setFormData] = useState({
@@ -146,11 +146,11 @@ const Register = () => {
         // After successful registration, move to Registration Details
         setCurrentStep(1);
       } else if (currentStep === 1) {
-        // Solana wallet must be bound before pre-qualification submit; the
+        // A wallet must be bound before pre-qualification submit; the
         // pool PDA is derived from this wallet at CRO approval time and is
         // immutable thereafter.
         if (!boundWallet) {
-          throw new Error('Connect and bind your Solana wallet before submitting.');
+          throw new Error('Connect and bind your wallet before submitting.');
         }
 
         // Upload documents if any (from the 'documents' field)
@@ -241,7 +241,7 @@ const Register = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Solana wallet</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Wallet</h3>
               <p className="text-xs text-gray-600 mb-3">
                 Required. The wallet you bind here will be permanently linked to
                 your eventual on-chain credit pool — choose carefully.

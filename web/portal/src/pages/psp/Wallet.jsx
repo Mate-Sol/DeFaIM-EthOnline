@@ -58,7 +58,7 @@ const Wallet = () => {
         <div className="max-w-4xl mx-auto">
           <header className="mb-8">
             <h1 className="page-header">Wallet</h1>
-            <p className="text-gray-600">Your connected Solana wallet for drawdowns and repayments</p>
+            <p className="text-gray-600">Your connected wallet for drawdowns and repayments</p>
           </header>
 
           <div className="mb-8">
@@ -95,7 +95,7 @@ const Wallet = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                              title="View on Solana Explorer"
+                              title="View on Arcscan"
                             >
                               <ExternalLink className="w-5 h-5" />
                             </a>
@@ -152,7 +152,7 @@ const Wallet = () => {
                       rel="noopener noreferrer"
                       className="text-xs text-brand-purple hover:underline"
                     >
-                      View on Solana Explorer
+                      View on Arcscan
                     </a>
                   </div>
                 </div>

@@ -2,11 +2,11 @@
  * EVM chain configuration.
  *
  * Central home for every "which chain / which contract / which key" question
- * the server needs to answer at runtime. Same code deploys to Polygon Amoy in
+ * the server needs to answer at runtime. Defaults target Arc Testnet.
  * one repo and Arc testnet in the other — only the env values change.
  *
  * Env-var contract:
- *   EVM_CHAIN_ID              chain id (80002 = Polygon Amoy, 421614 = Arb Sepolia, etc.)
+ *   EVM_CHAIN_ID              chain id (5042002 = Arc Testnet, 5042 = Arc Mainnet)
  *   EVM_RPC_URL               json-rpc endpoint
  *   PAYFI_FACTORY_ADDRESS     PoolFactory (payfi_v1)
  *   PAYFI_TREASURY_ADDRESS    TreasuryReserve (payfi_v1)
@@ -24,7 +24,7 @@ require('dotenv').config();
 const { ethers } = require('ethers');
 
 const CHAIN_ID = parseInt(process.env.EVM_CHAIN_ID || '80002', 10);
-const RPC_URL  = process.env.EVM_RPC_URL || 'https://rpc-amoy.polygon.technology';
+const RPC_URL  = process.env.EVM_RPC_URL || 'https://rpc.testnet.arc.io';
 
 const FACTORY_ADDRESS    = process.env.PAYFI_FACTORY_ADDRESS   || '';
 const TREASURY_ADDRESS   = process.env.PAYFI_TREASURY_ADDRESS  || '';

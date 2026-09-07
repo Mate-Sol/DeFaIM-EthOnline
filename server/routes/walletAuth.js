@@ -13,7 +13,7 @@
  *   POST /auth/wallet/bind            (JWT-protected)
  *     body: { wallet, nonce, signature }
  *     binds the verified wallet to the authenticated User
- *     (PSP → PSPProfile.solanaWallet, admin → User.solanaWallet).
+ *     (PSP → PSPProfile.walletAddress, admin → User.walletAddress).
  */
 
 const express = require('express');
@@ -116,7 +116,7 @@ router.post('/onchain-admin/login', async (req, res) => {
     // the User schema's unique-email constraint passes and we can re-find
     // on subsequent logins.
     const shadowEmail = `onchain-admin+${verifiedWallet.toLowerCase()}@paymate.local`;
-    let user = await User.findOne({ solanaWallet: verifiedWallet, role: 'ONCHAIN_ADMIN' });
+    let user = await User.findOne({ walletAddress: verifiedWallet, role: 'ONCHAIN_ADMIN' });
     if (!user) {
       user = await User.create({
         email: shadowEmail,
@@ -125,7 +125,7 @@ router.post('/onchain-admin/login', async (req, res) => {
         name: `On-Chain Admin (${verifiedWallet.slice(0, 6)}…)`,
         companyName: 'PayMate Internal',
         role: 'ONCHAIN_ADMIN',
-        solanaWallet: verifiedWallet,
+        walletAddress: verifiedWallet,
       });
     }
 
@@ -141,7 +141,7 @@ router.post('/onchain-admin/login', async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        solanaWallet: user.solanaWallet,
+        walletAddress: user.walletAddress,
       },
     });
   } catch (err) {
@@ -163,7 +163,7 @@ router.post('/bind', authMiddleware, async (req, res) => {
     const verifiedWallet = await verifySignature({ wallet, nonce, signature, message, purpose: 'bind' });
 
     // PSPs bind on PSPProfile (matches existing schema's walletAddress array
-    // for backward compat, plus new solanaWallet field for the canonical
+    // for backward compat, plus new walletAddress field for the canonical
     // primary wallet baked into the on-chain pool).
     if (req.user.role === 'PSP') {
       const profile = await PSPProfile.findOne({ userId: req.user.userId });
@@ -172,22 +172,22 @@ router.post('/bind', authMiddleware, async (req, res) => {
       // Once a pool has been initialized for this PSP, the on-chain pool
       // PDA seed is bound to the wallet at init time. Rebinding to a
       // different wallet would orphan that pool. Block.
-      if (profile.solanaWallet && profile.solanaWallet !== verifiedWallet) {
+      if (profile.walletAddress && profile.walletAddress !== verifiedWallet) {
         if (profile.assignedPoolAddress) {
           return res.status(409).json({
             message: 'Wallet already bound and a pool is initialized; cannot rebind',
-            currentWallet: profile.solanaWallet,
+            currentWallet: profile.walletAddress,
           });
         }
       }
 
-      profile.solanaWallet = verifiedWallet;
+      profile.walletAddress = verifiedWallet;
       // Maintain legacy `walletAddress` array for code paths that still
-      // read it. New code should prefer `solanaWallet`.
+      // read it. New code should prefer `walletAddress`.
       profile.walletAddress = profile.walletAddress || [];
       const exists = profile.walletAddress.find((w) => w.address === verifiedWallet);
       if (!exists) {
-        profile.walletAddress.unshift({ address: verifiedWallet, name: 'Primary Solana Wallet' });
+        profile.walletAddress.unshift({ address: verifiedWallet, name: 'Primary Wallet' });
       }
       await profile.save();
       return res.json({ success: true, role: 'PSP', wallet: verifiedWallet });
@@ -197,7 +197,7 @@ router.post('/bind', authMiddleware, async (req, res) => {
     // so admin actions sign as that wallet.
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    user.solanaWallet = verifiedWallet;
+    user.walletAddress = verifiedWallet;
     await user.save();
     res.json({ success: true, role: req.user.role, wallet: verifiedWallet });
   } catch (err) {

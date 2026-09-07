@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   define: {
-    // Some Solana wallet adapter deps reference `process.env.*`; vite doesn't
+    // Some wallet deps reference `process.env.*`; vite doesn't
     // shim that by default. Empty stub keeps them from crashing at import.
     'process.env': {},
     global: 'globalThis',
@@ -29,11 +29,6 @@ export default defineConfig({
     // Pre-bundle these; otherwise the wallet-adapter ESM/CJS interop blows
     // up at runtime in dev mode.
     include: [
-      '@solana/web3.js',
-      '@solana/wallet-adapter-base',
-      '@solana/wallet-adapter-react',
-      '@solana/wallet-adapter-react-ui',
-      '@solana/wallet-adapter-wallets',
       'buffer',
     ],
   },
