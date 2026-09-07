@@ -138,8 +138,18 @@ contract PoolContract is AccessControl, ReentrancyGuard {
 
     // ── Events ───────────────────────────────────────────────────────────────
 
-    event Deposit(address indexed lp, uint256 amount);
-    event Withdraw(address indexed lp, uint256 amount);
+    /// @dev ERC-4626 event shape. Shares are 1:1 with assets — the pool tracks
+    /// LP principal rather than an appreciating share price, and yield is
+    /// claimed separately via claimYield(). Emitting the standard signature
+    /// lets tokenized-vault indexers read this pool with a shared schema.
+    event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
+    event Withdraw(
+        address indexed sender,
+        address indexed receiver,
+        address indexed owner,
+        uint256 assets,
+        uint256 shares
+    );
     event Locked(uint256 poolStartTs, uint256 poolFinalityTs, uint256 dollarSeconds, uint256 yieldOwed);
     event FundingFailed();
     event ReceiverAdded(address indexed receiver);
@@ -269,7 +279,7 @@ contract PoolContract is AccessControl, ReentrancyGuard {
         pos.principal += amount;
         principal     += amount;
 
-        emit Deposit(msg.sender, amount);
+        emit Deposit(msg.sender, msg.sender, amount, amount);
     }
 
     // ── LP: withdraw ─────────────────────────────────────────────────────────
@@ -298,7 +308,7 @@ contract PoolContract is AccessControl, ReentrancyGuard {
         principal     -= amount;
 
         IERC20(stablecoin).safeTransfer(msg.sender, amount);
-        emit Withdraw(msg.sender, amount);
+        emit Withdraw(msg.sender, msg.sender, msg.sender, amount, amount);
     }
 
     // ── Funding finalization (public + lazily triggered) ─────────────────────
@@ -1373,6 +1383,68 @@ contract PoolContract is AccessControl, ReentrancyGuard {
     // executeDrawdown has additional per-call guards (status, receiver, cap, amount, etc.) that
     // surface as reverts. Agents should use this as a quick "is the pool currently open for
     // drawdowns at all" check, not as a guarantee that a specific draw will go through.
+    // ── ERC-4626 compatibility surface ───────────────────────────────────────
+    //
+    // This pool is a credit facility, not a compliant ERC-4626 vault: there is
+    // no transferable share token, deposits are only accepted during the
+    // funding window, and redemption follows the repayment waterfall rather
+    // than a share price. What follows is the read surface of the standard,
+    // so tokenized-vault tooling can read pool state through a shared schema.
+    //
+    // Shares are 1:1 with assets throughout. Yield does not accrue to a share
+    // price; it accrues per-LP on dollar-seconds and is drawn via claimYield().
+
+    /// @notice Underlying asset — USDC on Arc.
+    function asset() external view returns (address) {
+        return stablecoin;
+    }
+
+    /// @notice Total LP principal currently committed to the pool.
+    function totalAssets() public view returns (uint256) {
+        return principal;
+    }
+
+    /// @notice Shares outstanding. Equal to total assets, 1:1.
+    function totalSupply() external view returns (uint256) {
+        return principal;
+    }
+
+    /// @notice An LP's share balance. Equal to their principal, 1:1.
+    function balanceOf(address owner) external view returns (uint256) {
+        return lpPositions[owner].principal;
+    }
+
+    function convertToShares(uint256 assets) external pure returns (uint256) {
+        return assets;
+    }
+
+    function convertToAssets(uint256 shares) external pure returns (uint256) {
+        return shares;
+    }
+
+    function previewDeposit(uint256 assets) external pure returns (uint256) {
+        return assets;
+    }
+
+    function previewWithdraw(uint256 assets) external pure returns (uint256) {
+        return assets;
+    }
+
+    /// @notice Remaining headroom to the hard cap, or zero outside the
+    /// funding window — deposits are rejected once the pool locks.
+    function maxDeposit(address) external view returns (uint256) {
+        if (status != Status.Funding) return 0;
+        return principal >= hardCap ? 0 : hardCap - principal;
+    }
+
+    /// @notice Withdrawable principal. Non-zero only while the pool is still
+    /// funding or has closed unsuccessfully; afterwards principal is returned
+    /// through claimPrincipal() under the waterfall.
+    function maxWithdraw(address owner) external view returns (uint256) {
+        if (status != Status.Funding && status != Status.Unsuccessful) return 0;
+        return lpPositions[owner].principal;
+    }
+
     function isDrawdownAllowed() external view returns (bool) {
         return !_hasOverdueUnsettled();
     }
