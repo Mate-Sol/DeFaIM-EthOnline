@@ -21,7 +21,6 @@ jobs:
   contracts:
     name: Contracts (forge)
     runs-on: ubuntu-latest
-    if: hashFiles('contracts/foundry.toml') != ''
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,7 +36,6 @@ jobs:
   server:
     name: Server (node --test)
     runs-on: ubuntu-latest
-    if: hashFiles('server/package.json') != ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
