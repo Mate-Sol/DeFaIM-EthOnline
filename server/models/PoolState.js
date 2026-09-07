@@ -52,6 +52,19 @@ const PoolStateSchema = new mongoose.Schema(
     nextDrawdownId: String,
     countActiveDrawdowns: Number,
 
+    // Terms and live economics, cached so the marketplace can be served
+    // without a per-request read of every pool's view getters.
+    aprAnnualBps: Number,
+    availableToDd: String,
+    yieldOwed: String,
+    fundingCredit: String,
+    fundingStartTs: String,
+    fMaturityTs: String,
+    poolStartTs: String,
+    poolFinalityTs: String,
+    isDrawdownAllowed: Boolean,
+    status: Number,
+
     lastIndexedAt: { type: Date, default: Date.now, index: true },
   },
   { timestamps: true }

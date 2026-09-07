@@ -129,6 +129,55 @@ function shapePoolResponse(mongoDoc, state) {
   };
 }
 
+// Same response shape, built from the indexer's cached document.
+//
+// The live shaper reads ~25 view getters per pool. Doing that for every pool
+// on every marketplace request is what made /pools fall over on a public RPC:
+// the reads get rate-limited, each pool is skipped, and the list comes back
+// empty. The indexer already holds this state, so serve it from there and
+// only read the chain when a pool has no fresh snapshot.
+function shapePoolFromDoc(d) {
+  return {
+    pubkey:               d.pubkey,
+    admin:                d.admin || d.pspWallet,
+    pspWallet:            d.pspWallet,
+    pspName:              d.pspName || null,
+    facilityId:           d.facilityId || null,
+    usdcMint:             d.usdcMint,
+    vault:                d.vault || d.pubkey,
+    lpMint:               d.lpMint || d.pubkey,
+    softCap:              d.softCap ?? '0',
+    hardCap:              d.hardCap ?? '0',
+    facilityTenorDays:    d.facilityTenorDays ?? 0,
+    utilizationRateBps:   d.utilizationRateBps ?? 0,
+    commitmentRateBps:    d.commitmentRateBps ?? 0,
+    penaltyRateBps:       d.penaltyRateBps ?? 0,
+    aprAnnualBps:         d.aprAnnualBps ?? 0,
+    graceDays:            d.graceDays ?? 0,
+    penaltyDays:          d.penaltyDays ?? d.graceDays ?? 0,
+    protocolFeeShareBps:  d.protocolFeeShareBps ?? 0,
+    secondsPerDay:        86400,
+    isActive:             Boolean(d.isActive),
+    isCancelled:          Boolean(d.isCancelled),
+    isDefaulted:          Boolean(d.isDefaulted),
+    createdDay:           d.createdDay ?? 0,
+    activatedDay:         d.activatedDay ?? 0,
+    totalCapital:         d.totalCapital ?? '0',
+    outstandingPrincipal: d.outstandingPrincipal ?? '0',
+    availableToDd:        d.availableToDd ?? '0',
+    yieldOwed:            d.yieldOwed ?? '0',
+    fundingCredit:        d.fundingCredit ?? '0',
+    todayDay:             d.todayDay ?? 0,
+    todayPeakOutstanding: d.outstandingPrincipal ?? '0',
+    accruedCommitFee:     '0',
+    accruedUtilFee:       '0',
+    accruedPenaltyFee:    '0',
+    protocolFeesOwed:     '0',
+    nextDrawdownId:       '0',
+    countActiveDrawdowns: 0,
+  };
+}
+
 function poolMatchesState(p, state) {
   if (!state) return true;
   const s = String(state).toLowerCase();
@@ -356,13 +405,23 @@ router.get('/pool/:pool/drawdown/:drawdownId/pipeline', async (req, res) => {
 router.get('/pools', async (req, res) => {
   try {
     const { state: qState } = req.query;
+    const STALE_MS = parseInt(process.env.POOL_CACHE_STALE_MS || '180000', 10);
+
+    const docs = await PoolState.find({ pubkey: /^0x/ }).lean();
+    const cached = new Map(docs.map((d) => [d.pubkey, d]));
+
     const poolAddresses = await svc.readAllPools();
     const rows = [];
     for (const poolAddress of poolAddresses) {
       try {
-        const state = await svc.readPoolState(poolAddress);
-        const mongoDoc = await PoolState.findOne({ pubkey: poolAddress }).lean();
-        const shaped = shapePoolResponse(mongoDoc, state);
+        const doc = cached.get(poolAddress);
+        const fresh = doc?.lastIndexedAt
+          && (Date.now() - new Date(doc.lastIndexedAt).getTime()) < STALE_MS;
+
+        const shaped = fresh
+          ? shapePoolFromDoc(doc)
+          : shapePoolResponse(doc, await svc.readPoolState(poolAddress));
+
         shaped.pspName = await labelFor(poolAddress, shaped.pspName);
         shaped.countActiveDrawdowns = await DrawdownState.countDocuments({ pool: poolAddress, repaid: false });
         rows.push(shaped);

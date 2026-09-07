@@ -95,6 +95,28 @@ async function _withRetry(fn, retries = 3) {
   throw lastErr;
 }
 
+// Reading a pool's full state means ~25 view calls. Firing them all at once
+// per pool trips the rate limiter on public RPC endpoints once more than a
+// couple of pools exist, so they go out in small waves instead. Order is
+// preserved, which the destructuring above depends on.
+//
+// The batch size and spacing are deliberately conservative; a dedicated
+// endpoint can raise both via env.
+const RPC_BATCH_SIZE  = parseInt(process.env.EVM_RPC_BATCH_SIZE || '5', 10);
+const RPC_BATCH_PAUSE = parseInt(process.env.EVM_RPC_BATCH_PAUSE_MS || '120', 10);
+
+async function _inBatches(thunks) {
+  const out = [];
+  for (let i = 0; i < thunks.length; i += RPC_BATCH_SIZE) {
+    const slice = thunks.slice(i, i + RPC_BATCH_SIZE);
+    out.push(...await Promise.all(slice.map((fn) => fn())));
+    if (i + RPC_BATCH_SIZE < thunks.length && RPC_BATCH_PAUSE > 0) {
+      await new Promise((r) => setTimeout(r, RPC_BATCH_PAUSE));
+    }
+  }
+  return out;
+}
+
 async function readPoolState(poolAddress) {
   const pool = getPool(poolAddress);
   const [
@@ -104,15 +126,16 @@ async function readPoolState(poolAddress) {
     fundingStartTs, fMaturityTs, poolStartTs, poolFinalityTs,
     principal, availableToDd, outstanding, fundingCredit, yieldOwed, dollarSeconds,
     isDrawdownAllowed, currentDay,
-  ] = await _withRetry(() => Promise.all([
-    pool.status(), pool.pspWallet(), pool.stablecoin(), pool.factory(),
-    pool.softCap(), pool.hardCap(), pool.tenure(), pool.aprAnnual(),
-    pool.idleRateDaily(), pool.utilizedRateDaily(), pool.penaltyRateDaily(),
-    pool.penaltyGraceDays(), pool.minDeposit(),
-    pool.fundingStartTs(), pool.fMaturityTs(), pool.poolStartTs(), pool.poolFinalityTs(),
-    pool.principal(), pool.availableToDd(), pool.outstanding(),
-    pool.fundingCredit(), pool.yieldOwed(), pool.dollarSeconds(),
-    pool.isDrawdownAllowed(), pool.currentDay(),
+  ] = await _withRetry(() => _inBatches([
+    () => pool.status(), () => pool.pspWallet(), () => pool.stablecoin(), () => pool.factory(),
+    () => pool.softCap(), () => pool.hardCap(), () => pool.tenure(), () => pool.aprAnnual(),
+    () => pool.idleRateDaily(), () => pool.utilizedRateDaily(), () => pool.penaltyRateDaily(),
+    () => pool.penaltyGraceDays(), () => pool.minDeposit(),
+    () => pool.fundingStartTs(), () => pool.fMaturityTs(), () => pool.poolStartTs(),
+    () => pool.poolFinalityTs(),
+    () => pool.principal(), () => pool.availableToDd(), () => pool.outstanding(),
+    () => pool.fundingCredit(), () => pool.yieldOwed(), () => pool.dollarSeconds(),
+    () => pool.isDrawdownAllowed(), () => pool.currentDay(),
   ]));
 
   return {

@@ -58,6 +58,11 @@ const isRateLimited = (e) =>
 // Solana-only fields unset. See docs/EVM_SCHEMA_MAP.md (todo) for the
 // full mapping.
 
+// WAD (1e18) fixed-point rate -> basis points.
+function _wadToBps(wad) {
+  return Number((BigInt(wad) * 10000n) / 1000000000000000000n);
+}
+
 function poolStateToDoc(state, extras = {}) {
   return {
     // Identity
@@ -72,6 +77,25 @@ function poolStateToDoc(state, extras = {}) {
     hardCap: state.hardCap.toString(),
     facilityTenorDays: Number(state.tenure),
     graceDays: Number(state.penaltyGraceDays),
+    penaltyDays: Number(state.penaltyGraceDays),
+
+    // Terms, as basis points. Cached so /pools can answer from Mongo
+    // instead of reading every pool's getters on each request.
+    aprAnnualBps:       _wadToBps(state.aprAnnual),
+    utilizationRateBps: _wadToBps(state.utilizedRateDaily),
+    commitmentRateBps:  _wadToBps(state.idleRateDaily),
+    penaltyRateBps:     _wadToBps(state.penaltyRateDaily),
+
+    // Live economics
+    availableToDd:  state.availableToDd.toString(),
+    yieldOwed:      state.yieldOwed.toString(),
+    fundingCredit:  state.fundingCredit.toString(),
+    fundingStartTs: state.fundingStartTs.toString(),
+    fMaturityTs:    state.fMaturityTs.toString(),
+    poolStartTs:    state.poolStartTs.toString(),
+    poolFinalityTs: state.poolFinalityTs.toString(),
+    isDrawdownAllowed: Boolean(state.isDrawdownAllowed),
+    status: state.status,
 
     // Lifecycle bits mapped to bool flags for the old schema.
     // payfi_v1 Status enum: 0=Funding,1=Active,2=Unsuccessful,3=Closed,4=Default
