@@ -1,0 +1,14 @@
+# Railway/Nixpacks build hints for the Node backend.
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci --no-fund --no-audit"]
+
+[phases.build]
+# Nothing to build — plain Node
+cmds = []
+
+[start]
+cmd = "node index.js"

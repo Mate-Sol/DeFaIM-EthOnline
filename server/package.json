@@ -1,0 +1,47 @@
+{
+  "name": "defa-server",
+  "version": "1.0.0",
+  "description": "DeFa backend — revolving credit facility API, Arc indexer, and transaction builders",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node seed.js",
+    "test": "node --test test/txHash.test.js test/poolServiceEvm.test.js test/evmIndexer.test.js test/observerAuth.test.js",
+    "test:e2e": "node --test test/e2eFlows.test.js test/lifecycleFlows.test.js",
+    "test:onchain": "node --test test/onchainFlows.test.js",
+    "test:all": "node --test test/e2eFlows.test.js test/lifecycleFlows.test.js test/onchainFlows.test.js"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "blockchain",
+    "defi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@azure/storage-blob": "^12.27.0",
+    "@sendgrid/mail": "^8.1.6",
+    "@sentry/node": "^10.52.0",
+    "axios": "^1.13.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.13.4",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.5.1",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.7",
+    "siwe": "^3.0.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
