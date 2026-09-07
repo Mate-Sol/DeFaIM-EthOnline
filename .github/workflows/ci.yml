@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [beta, main]
+  pull_request:
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  contracts:
+    name: Contracts (forge)
+    runs-on: ubuntu-latest
+    if: hashFiles('contracts/foundry.toml') != ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: forge build
+        working-directory: contracts
+        run: forge build --sizes
+      - name: forge test
+        working-directory: contracts
+        run: forge test -vv
+
+  server:
+    name: Server (node --test)
+    runs-on: ubuntu-latest
+    if: hashFiles('server/package.json') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        working-directory: server
+        run: npm ci
+      - name: Unit tests
+        working-directory: server
+        run: npm test

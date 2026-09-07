@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+build/
+out/
+cache/
+broadcast/
+
+# Environment — NEVER commit a .env containing secrets
+.env
+.env.*
+!.env.example
+
+# Foundry
+contracts/out/
+contracts/cache/
+
+# Subgraph
+subgraph/generated/
+subgraph/build/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
