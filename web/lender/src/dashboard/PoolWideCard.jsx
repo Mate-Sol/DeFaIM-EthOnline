@@ -156,7 +156,9 @@ const PoolWideCard = ({ onClick, deal }) => {
       <div className="px-4 sm:px-5 pt-4 pb-0">
         {/* Stats Row 1 — 2 cols on mobile, 4 on sm+ */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <StatItem label="APY Rate:" value={`${deal?.overview?.apyRate ?? 0}%`} />
+          {/* apyRate arrives pre-formatted ("14.00%"); overview carries loan
+              terms only, so reading it from there always yielded 0%. */}
+          <StatItem label="APY Rate:" value={deal?.apyRate ?? `${deal?.apy ?? 0}%`} />
           <StatItem label="Total Loan:" value={`$${Number(deal?.overview?.loanAmount || 0).toLocaleString()}`} />
           <StatItem label="KYI Score:" value={deal?.kyiScore} />
           <StatItem label="Loan Tenure:" value={deal?.overview?.loanTenure} />

@@ -31,9 +31,12 @@ export function tsToDate(ts) {
 /** Human-readable status string aligned to statusFormater in libs/utils. */
 export function poolStatus(pool) {
   if (pool.isDefaulted) return 'defaulted';
+  // The UI formats 'lending' as OPEN and 'closed' as ACTIVE, so a pool still
+  // taking deposits is 'lending' and a deployed one is 'closed'.
+  if (pool.isDefaulted) return 'defaulted';
   if (pool.isCancelled) return 'unfulfilled';
-  if (pool.isActive)    return 'lending';    // → formats to "OPEN"
-  return 'closed';                            // funding-complete/closed
+  if (pool.isActive)    return 'closed';     // capital deployed
+  return 'lending';                          // accepting deposits
 }
 
 /**

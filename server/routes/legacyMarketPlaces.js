@@ -47,11 +47,24 @@ function poolRiskLevel(aprBps) {
   return 'High';
 }
 
+// Pool.Status -> the marketplace's wire vocabulary.
+//
+// That vocabulary is older than the contract and does not read literally:
+// the UI formats 'lending' as OPEN and 'closed' as ACTIVE. So a pool still
+// taking deposits is 'lending', and one whose capital is deployed is
+// 'closed'. Mapping Funding to 'closed' hides exactly the pools a lender
+// can act on, which is what used to happen here.
+//
+// Status: 0=Funding, 1=Active, 2=Unsuccessful, 3=Closed, 4=Default
 function statusFor(state) {
-  if (state.status === 4) return 'defaulted';
-  if (state.status === 2) return 'unfulfilled';
-  if (state.status === 1) return 'lending';    // → formats to OPEN in the UI
-  return 'closed';
+  switch (Number(state.status)) {
+    case 4:  return 'defaulted';
+    case 2:  return 'unfulfilled';
+    case 3:  return 'completed';   // → SETTLED
+    case 1:  return 'closed';      // → ACTIVE: capital deployed
+    case 0:
+    default: return 'lending';     // → OPEN: accepting deposits
+  }
 }
 
 function wadToBps(wad) {
@@ -244,8 +257,9 @@ router.post('/getAlldealsnew', async (req, res) => {
     //   Settled  → closed (post-finality)
     if (status && status !== 'All') {
       const s = String(status).toLowerCase();
-      if (s === 'open' || s === 'active') deals = deals.filter((d) => d.status === 'lending');
-      else if (s === 'settled') deals = deals.filter((d) => d.status === 'closed');
+      if (s === 'open') deals = deals.filter((d) => d.status === 'lending');
+      else if (s === 'active') deals = deals.filter((d) => d.status === 'closed');
+      else if (s === 'settled') deals = deals.filter((d) => d.status === 'completed');
     }
     if (riskType && riskType !== 'All') {
       const r = String(riskType);
