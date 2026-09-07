@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../src/PoolContract.sol";
 import "../src/PoolFactory.sol";
 import "../src/TreasuryReserve.sol";
-import "../src/MockStablecoin.sol";
+import "./mocks/MockStablecoin.sol";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Attack helpers

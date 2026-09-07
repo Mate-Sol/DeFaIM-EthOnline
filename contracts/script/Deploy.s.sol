@@ -6,7 +6,7 @@ pragma solidity ^0.8.26;
  *
  * Foundry deploy script for the payfi_v1 contract set. Deploys in order:
  *
- *   1. MockStablecoin (test USDC — 6 decimals, unrestricted mint)
+ *   1. Settlement asset — native USDC on Arc, MockStablecoin elsewhere
  *   2. TreasuryReserve
  *   3. PoolContract (implementation, used as EIP-1167 clone source)
  *   4. PoolFactory (wires impl + treasury + stablecoin + bounds)
@@ -46,7 +46,7 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "../src/MockStablecoin.sol";
+import "../test/mocks/MockStablecoin.sol";
 import "../src/TreasuryReserve.sol";
 import "../src/PoolContract.sol";
 import "../src/PoolFactory.sol";
@@ -54,6 +54,15 @@ import "../src/PoolFactory.sol";
 contract DeployScript is Script {
     // ── WAD helper — Solidity's 1e18 fixed-point scale ─────────────
     uint256 internal constant WAD = 1e18;
+
+    // ── Settlement asset ───────────────────────────────────────────
+    // Arc's native gas token is USDC. It exposes a standard 6-decimal
+    // ERC-20 interface at a fixed address, which is what the pool set
+    // transacts against — no native-value paths are used anywhere.
+    address internal constant ARC_USDC = 0x3600000000000000000000000000000000000000;
+
+    uint256 internal constant ARC_MAINNET = 5042;
+    uint256 internal constant ARC_TESTNET = 5042002;
 
     function run() external {
         // ── Actor addresses ─────────────────────────────────────────
@@ -73,9 +82,22 @@ contract DeployScript is Script {
 
         vm.startBroadcast();
 
-        // ── 1. MockStablecoin ───────────────────────────────────────
-        MockStablecoin usdc = new MockStablecoin();
-        console.log("MockStablecoin:      ", address(usdc));
+        // ── 1. Settlement asset ─────────────────────────────────────
+        // On Arc, USDC already exists as a precompiled ERC-20; deploying a
+        // stand-in would be wrong. Anywhere else (Anvil, forks) there is no
+        // USDC, so a 6-decimal mock takes its place. STABLECOIN overrides both.
+        address usdc = _envAddr("STABLECOIN", address(0));
+        if (usdc == address(0)) {
+            if (block.chainid == ARC_MAINNET || block.chainid == ARC_TESTNET) {
+                usdc = ARC_USDC;
+                console.log("USDC (Arc native):   ", usdc);
+            } else {
+                usdc = address(new MockStablecoin());
+                console.log("MockStablecoin:      ", usdc);
+            }
+        } else {
+            console.log("USDC (from env):     ", usdc);
+        }
 
         // ── 2. TreasuryReserve ──────────────────────────────────────
         // reserveRate: 20% of protocol fees flow into reserve
@@ -88,7 +110,7 @@ contract DeployScript is Script {
         uint256 lpBonusShare      = 5 * 1e17;   // 0.50 WAD
 
         TreasuryReserve treasury = new TreasuryReserve(
-            address(usdc), multisig,
+            usdc, multisig,
             reserveRate, reserveTarget, hurdleFrac, lpBonusShare
         );
         console.log("TreasuryReserve:     ", address(treasury));
@@ -112,7 +134,7 @@ contract DeployScript is Script {
         uint256 maxDdDays              = 365;
 
         PoolFactory factory = new PoolFactory(
-            multisig, roleDeployer, address(poolImpl), address(treasury), address(usdc),
+            multisig, roleDeployer, address(poolImpl), address(treasury), usdc,
             maxFundingDurationSecs, fundingExecBufferDays, maxGracePeriodDays, minDdDays, maxDdDays
         );
         console.log("PoolFactory:         ", address(factory));
@@ -171,11 +193,11 @@ contract DeployScript is Script {
         console.log("=========================================================");
         console.log("Paste into server/.env and client/.env:");
         console.log("=========================================================");
-        console.log("PAYFI_STABLECOIN_ADDRESS = ", address(usdc));
+        console.log("PAYFI_STABLECOIN_ADDRESS = ", usdc);
         console.log("PAYFI_TREASURY_ADDRESS   = ", address(treasury));
         console.log("PAYFI_FACTORY_ADDRESS    = ", address(factory));
         console.log("");
-        console.log("VITE_STABLECOIN_ADDRESS  = ", address(usdc));
+        console.log("VITE_STABLECOIN_ADDRESS  = ", usdc);
         console.log("VITE_TREASURY_ADDRESS    = ", address(treasury));
         console.log("VITE_FACTORY_ADDRESS     = ", address(factory));
         console.log("=========================================================");

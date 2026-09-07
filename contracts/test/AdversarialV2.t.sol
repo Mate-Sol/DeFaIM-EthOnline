@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "../src/PoolContract.sol";
 import "../src/PoolFactory.sol";
 import "../src/TreasuryReserve.sol";
-import "../src/MockStablecoin.sol";
+import "./mocks/MockStablecoin.sol";
 import "../src/MathLib.sol";
 
 /// @dev Suite adversarial Parts A and B ported from suite_adversarial.py.

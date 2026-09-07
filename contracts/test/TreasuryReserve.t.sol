@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import "../src/TreasuryReserve.sol";
-import "../src/MockStablecoin.sol";
+import "./mocks/MockStablecoin.sol";
 
 /// @dev Minimal factory stub that recognises one registered pool.
 contract MockFactory {

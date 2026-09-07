@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "../src/PoolContract.sol";
 import "../src/PoolFactory.sol";
 import "../src/TreasuryReserve.sol";
-import "../src/MockStablecoin.sol";
+import "./mocks/MockStablecoin.sol";
 
 /// @dev Phase 3A — Gas profiling.
 ///

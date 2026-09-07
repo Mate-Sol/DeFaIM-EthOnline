@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "../src/PoolContract.sol";
 import "../src/PoolFactory.sol";
 import "../src/TreasuryReserve.sol";
-import "../src/MockStablecoin.sol";
+import "./mocks/MockStablecoin.sol";
 import "../src/MathLib.sol";
 
 /// @dev Layer B handler: multi-pool economic independence.

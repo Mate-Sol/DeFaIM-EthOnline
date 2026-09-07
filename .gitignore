@@ -26,3 +26,6 @@ subgraph/build/
 *.swp
 .idea/
 .vscode/
+
+# Vite build output
+web/*/dist/

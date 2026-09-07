@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import "./MultipoolHandlerB.sol";
 import "../src/PoolContract.sol";
-import "../src/MockStablecoin.sol";
+import "./mocks/MockStablecoin.sol";
 
 /// @dev Layer B invariant suite: multi-pool economic independence.
 ///
