@@ -1,0 +1,11 @@
+node_modules
+.git
+.gitignore
+*.log
+.DS_Store
+coverage
+
+# Secrets — supplied at runtime by the deployment, never baked in.
+.env
+.env.*
+!.env.example

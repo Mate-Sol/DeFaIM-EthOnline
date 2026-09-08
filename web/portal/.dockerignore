@@ -1,0 +1,15 @@
+# Never ship the host's build output or dependencies into the image: they
+# bloat the build context (hundreds of MB) and COPY would overwrite the
+# modules installed for the image's own platform.
+node_modules
+dist
+.git
+.gitignore
+*.log
+.DS_Store
+
+# Secrets. .env.production is intentionally NOT ignored — Vite needs it at
+# build time and it holds only public values.
+.env
+.env.local
+.env.development

@@ -89,3 +89,34 @@ PUBLIC_DEMO_CODE=654321 node scripts/seedPublicDemoCode.js
 
 `GET /pools` returns the indexed facilities and is a good readiness probe: it
 answers from MongoDB and does not depend on the RPC being reachable.
+
+## MongoDB
+
+The API needs a MongoDB it can reach from the cluster. Anything that speaks
+the wire protocol works — Atlas, a managed instance, or one running in the
+cluster. Provide it as `MONGODB_URI`.
+
+Atlas is the quickest route for a hosted deployment:
+
+1. Create a project and an **M0** (free) cluster in the region closest to the
+   API.
+2. Database Access → add a user with **Read and write to any database**.
+3. Network Access → allow the cluster's egress IP, or `0.0.0.0/0` for a demo
+   environment.
+4. Connect → Drivers → copy the connection string and append the database
+   name:
+
+```
+mongodb+srv://<user>:<password>@<cluster>.mongodb.net/defa?retryWrites=true&w=majority
+```
+
+Store it as a secret; it contains a password.
+
+Sizing is modest — the API keeps user, facility, pool-snapshot and drawdown
+documents, all small. M0's 512 MB is enough for a demo, but note that when an
+M0 hits its quota the symptom is *write* failures that surface as login
+timeouts rather than an obvious storage error, so give a long-lived deployment
+a paid tier.
+
+The indexer writes one document per pool per poll. Nothing in the schema grows
+per request.
