@@ -8,8 +8,9 @@ RUN npm install --omit=dev --no-fund --no-audit
 
 COPY . .
 
-# The app reads PORT at runtime and defaults to 5050; the deployment sets it.
-ENV PORT=5090
-EXPOSE 5090
+# The app reads PORT at runtime and defaults to 5050, which is what the
+# existing Service targets. Do not set PORT here — overriding it silently
+# breaks the cluster's port mapping.
+EXPOSE 5050
 
 CMD ["node", "index.js"]

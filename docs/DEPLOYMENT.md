@@ -4,10 +4,10 @@ Four images. Everything targets Arc Testnet (chain `5042002`).
 
 | Service | Path | Port | Deployment | Notes |
 |---|---|---|---|---|
-| Backend API | `server/` | 5090 | `defa-be` | Node 22, needs MongoDB |
-| Lender client | `web/lender/` | 8081 | `defa-ui` | static, nginx |
-| PSP + admin client | `web/portal/` | 8080 | `defa-admin` | static, nginx |
-| PSP order book | `web/external-psp/` | 8082 | `defa-psp` | static, nginx; optional |
+| Backend API | `server/` | 5050 | `arc-be` | Node 22, needs MongoDB |
+| Lender client | `web/lender/` | 8081 | `arc-ui` | static, nginx |
+| PSP + admin client | `web/portal/` | 8080 | `arc-admin` | static, nginx |
+| PSP order book | `web/external-psp/` | 8082 | — | static, nginx; not deployed |
 
 `web/portal` is **one application serving both the borrower and every admin
 role**. KAM, CAD, CRO, CFO, Legal, view-only admin and PSP all sign in at the
@@ -109,7 +109,7 @@ Optional, with sensible defaults:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PORT` | 5050 | image sets 5090 |
+| `PORT` | 5050 | matches the existing Service; leave unset |
 | `EVM_INDEXER_INTERVAL_MS` | 30000 | indexer poll interval |
 | `EVM_INDEXER_WINDOW_BLOCKS` | 5000 | log scan window; Arc produces ~2 blocks/s |
 | `EVM_RPC_BATCH_SIZE` | 5 | view calls issued per wave |
