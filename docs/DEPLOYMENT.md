@@ -22,26 +22,54 @@ it only if the external-PSP flow is being demonstrated.
 
 ## Ingress
 
-Two public hostnames, matching the previous deployment's shape:
+This reuses the Arc hackathon stack rather than standing up a new one: same
+beta cluster, same `arc-hackathon` namespace, same image and deployment names,
+same hostnames and DNS. The names stay `arc-*` because they describe the chain,
+which has not changed.
 
 | Hostname | Routes to |
 |---|---|
-| `defa-ethonline.invoicemate.net` | `/` → lender client · `/api` → backend |
-| `defa-ethonline-admin.invoicemate.net` | `/` → PSP + admin client |
+| `defa-arc-hackathon.invoicemate.net` | `/` → `arc-ui` · `/api` → `arc-be` |
+| `defa-arc-hackathon-admin.invoicemate.net` | `/` → `arc-admin` |
 
 The backend mounts its routes at the root (`/auth`, `/pools`, `/admin`, …) and
-knows nothing about `/api`, so **the ingress must strip the `/api` prefix**
-before forwarding. This is the same arrangement as the previous deployment,
-where both clients pointed at the lender domain's `/api` path.
+knows nothing about `/api`, so the ingress strips that prefix before
+forwarding. This already works — it is how the previous deployment was wired.
 
-All four build from their own `Dockerfile` with no build args:
+## Pipeline
+
+`.github/workflows/deploy.yml` builds, scans and rolls out on every push to
+`beta`. It is the Arc pipeline with the build contexts repointed at this
+repo's layout. Tests live in `ci.yml` and are not repeated there.
+
+Four repository secrets are required, all of which already exist on the Arc
+repo:
+
+| Secret | Purpose |
+|---|---|
+| `DOCKER_UNAME` / `DOCKER_PASS` | Docker Hub push |
+| `BETA_GKE_WIF_PROVIDER` / `BETA_GKE_GKE_SA` | GKE workload identity |
+
+`GITLEAKS_LICENSE` is **not** needed: the secret scan runs the MIT-licensed
+gitleaks CLI rather than the licensed action.
+
+### What must change in the cluster
+
+The deployments already exist; only the backend's Secret needs updating,
+because the contracts are new:
 
 ```
-docker build -t defa-be     ./server
-docker build -t defa-ui     ./web/lender
-docker build -t defa-admin  ./web/portal
-docker build -t defa-psp    ./web/external-psp   # optional
+PAYFI_FACTORY_ADDRESS    0xB5AB6FD1672642cfafcf6A44b2eEAB712576f466
+PAYFI_TREASURY_ADDRESS   0x227D4F1F50162b5bEe0567AdBbbb1296061CfE1f
+PAYFI_STABLECOIN_ADDRESS 0x3600000000000000000000000000000000000000
+EVM_RPC_URL              https://rpc.testnet.arc.io
+MONGODB_URI              ...point at a fresh database name, e.g. /defa-ethonline
 ```
+
+Use a **new database name** on the existing MongoDB. The previous database
+holds records keyed on a wallet field that has since been renamed, and pools
+from the old factory that no longer exist. Same server, new database, no new
+infrastructure.
 
 ## Frontend configuration
 
