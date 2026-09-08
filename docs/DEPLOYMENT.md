@@ -120,3 +120,28 @@ a paid tier.
 
 The indexer writes one document per pool per poll. Nothing in the schema grows
 per request.
+
+## Verified locally
+
+All four images have been built and run together against MongoDB and the live
+Arc Testnet deployment:
+
+| Image | Size | Check |
+|---|---|---|
+| `defa-server` | 428 MB | `GET /pools` returned the live facilities |
+| `defa-lender` | 106 MB | HTTP 200, SPA fallback on deep routes |
+| `defa-portal` | 286 MB | HTTP 200, SPA fallback on deep routes |
+| `defa-external-psp` | 76 MB | HTTP 200, SPA fallback on deep routes |
+
+```
+docker run -d -p 5090:5090 \
+  -e MONGODB_URI=... -e JWT_SECRET=... \
+  -e EVM_CHAIN_ID=5042002 -e EVM_RPC_URL=https://rpc.testnet.arc.io \
+  -e PAYFI_STABLECOIN_ADDRESS=0x3600000000000000000000000000000000000000 \
+  -e PAYFI_FACTORY_ADDRESS=0xB5AB6FD1672642cfafcf6A44b2eEAB712576f466 \
+  -e PAYFI_TREASURY_ADDRESS=0x227D4F1F50162b5bEe0567AdBbbb1296061CfE1f \
+  defa-server
+```
+
+The frontends need no runtime environment — their configuration is baked in at
+build time.

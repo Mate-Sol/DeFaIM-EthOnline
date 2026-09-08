@@ -5,6 +5,11 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# WalletConnect pulls in bufferutil/utf-8-validate, which build through
+# node-gyp. Alpine ships no toolchain, so npm install fails without these.
+# They stay in the build stage — the nginx image below carries none of it.
+RUN apk add --no-cache python3 make g++
+
 COPY package.json package-lock.json ./
 # npm install (not ci) — tolerant of lockfile drift across npm major versions
 # (the runner's node:20-alpine ships npm 10; locks may be generated with 11).
