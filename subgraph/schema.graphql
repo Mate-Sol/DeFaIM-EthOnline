@@ -1,0 +1,192 @@
+# DeFa — credit facilities on Arc.
+#
+# The pool is a tokenized vault in the ERC-4626 sense of the read surface: it
+# has an underlying asset, total assets, and per-holder balances, and it emits
+# the standard Deposit and Withdraw events. It is not a compliant vault —
+# there is no transferable share token, deposits are confined to a funding
+# window, and redemption follows a repayment waterfall — so the vault fields
+# below sit alongside the facility's own credit semantics rather than
+# pretending to replace them.
+
+type Protocol @entity(immutable: false) {
+  "Singleton, id 'defa'."
+  id: ID!
+  factory: Bytes!
+  asset: Bytes!
+  facilityCount: Int!
+  totalDeposited: BigInt!
+  totalDrawn: BigInt!
+  totalRepaid: BigInt!
+  totalYieldClaimed: BigInt!
+}
+
+enum FacilityStatus {
+  "Accepting lender deposits."
+  FUNDING
+  "Locked; capital deployed and drawable."
+  ACTIVE
+  "Funding window closed below the soft cap."
+  UNSUCCESSFUL
+  "Matured and wound down."
+  CLOSED
+  "Declared in default."
+  DEFAULTED
+}
+
+type Facility @entity(immutable: false) {
+  "The pool clone's address."
+  id: ID!
+  protocol: Protocol!
+
+  # ── identity ──
+  poolId: BigInt!
+  borrower: Bytes!
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+
+  # ── ERC-4626 vault surface ──
+  "Underlying asset — USDC on Arc."
+  asset: Bytes!
+  "Lender principal committed. Mirrors totalAssets()."
+  totalAssets: BigInt!
+  "Shares outstanding. 1:1 with assets; the pool tracks principal, not an appreciating share price."
+  totalSupply: BigInt!
+
+  # ── credit terms ──
+  status: FacilityStatus!
+  softCap: BigInt!
+  hardCap: BigInt!
+  tenureDays: BigInt!
+  aprAnnual: BigInt!
+  utilizedRateDaily: BigInt!
+  idleRateDaily: BigInt!
+  penaltyRateDaily: BigInt!
+  penaltyGraceDays: BigInt!
+
+  # ── lifecycle timestamps ──
+  fundingMaturity: BigInt!
+  lockedAt: BigInt
+  finalityAt: BigInt
+
+  # ── running totals ──
+  totalDrawn: BigInt!
+  totalRepaid: BigInt!
+  totalFinanceCharge: BigInt!
+  totalYieldClaimed: BigInt!
+  totalPrincipalClaimed: BigInt!
+  outstanding: BigInt!
+  drawdownCount: Int!
+  lenderCount: Int!
+
+  # ── relations ──
+  positions: [Position!]! @derivedFrom(field: "facility")
+  deposits: [Deposit!]! @derivedFrom(field: "facility")
+  drawdowns: [Drawdown!]! @derivedFrom(field: "facility")
+  repayments: [Repayment!]! @derivedFrom(field: "facility")
+}
+
+type Lender @entity(immutable: false) {
+  "Wallet address."
+  id: ID!
+  firstSeenAt: BigInt!
+  totalDeposited: BigInt!
+  totalWithdrawn: BigInt!
+  totalYieldClaimed: BigInt!
+  totalPrincipalClaimed: BigInt!
+  positions: [Position!]! @derivedFrom(field: "lender")
+}
+
+type Position @entity(immutable: false) {
+  "facility-lender"
+  id: ID!
+  facility: Facility!
+  lender: Lender!
+  "Principal committed. Equals the lender's share balance, 1:1."
+  shares: BigInt!
+  deposited: BigInt!
+  withdrawn: BigInt!
+  yieldClaimed: BigInt!
+  principalClaimed: BigInt!
+  updatedAt: BigInt!
+}
+
+# ── events, kept immutable for time-series queries ──
+
+type Deposit @entity(immutable: true) {
+  id: ID!
+  facility: Facility!
+  lender: Lender!
+  "ERC-4626 caller."
+  sender: Bytes!
+  "ERC-4626 owner — who the shares are credited to."
+  owner: Bytes!
+  assets: BigInt!
+  shares: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+}
+
+type Withdrawal @entity(immutable: true) {
+  id: ID!
+  facility: Facility!
+  lender: Lender!
+  sender: Bytes!
+  receiver: Bytes!
+  owner: Bytes!
+  assets: BigInt!
+  shares: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+}
+
+type Drawdown @entity(immutable: false) {
+  "facility-ref"
+  id: ID!
+  facility: Facility!
+  "The facility's own reference for this draw."
+  ref: Bytes!
+  receiver: Bytes!
+  amount: BigInt!
+  drawnAt: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+
+  repaid: Boolean!
+  repaidAt: BigInt
+  principalRepaid: BigInt
+  financeCharge: BigInt
+}
+
+type Repayment @entity(immutable: true) {
+  id: ID!
+  facility: Facility!
+  drawdown: Drawdown!
+  ref: Bytes!
+  principal: BigInt!
+  financeCharge: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+}
+
+type YieldClaim @entity(immutable: true) {
+  id: ID!
+  facility: Facility!
+  lender: Lender!
+  amount: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+}
+
+type PrincipalClaim @entity(immutable: true) {
+  id: ID!
+  facility: Facility!
+  lender: Lender!
+  amount: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+}

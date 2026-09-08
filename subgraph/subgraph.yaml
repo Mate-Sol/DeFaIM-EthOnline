@@ -1,0 +1,89 @@
+specVersion: 1.0.0
+description: >
+  DeFa credit facilities on Arc. Indexes the factory for facility creation and,
+  through a template, every pool clone it deploys — lender deposits and
+  withdrawals in the ERC-4626 event shape, borrower drawdowns, repayments with
+  their finance charge, and lender claims.
+repository: https://github.com/Mate-Sol/DeFaIM-EthOnline
+schema:
+  file: ./schema.graphql
+
+dataSources:
+  - kind: ethereum
+    name: PoolFactory
+    network: arc-testnet
+    source:
+      address: "0xB5AB6FD1672642cfafcf6A44b2eEAB712576f466"
+      abi: PoolFactory
+      # Block the factory was deployed in — see docs/DEPLOYMENTS.md.
+      startBlock: 60935148
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/factory.ts
+      entities:
+        - Protocol
+        - Facility
+      abis:
+        - name: PoolFactory
+          file: ./abis/PoolFactory.json
+        - name: PoolContract
+          file: ./abis/PoolContract.json
+      eventHandlers:
+        - event: PoolCreated(indexed address,indexed uint256,indexed address,address,uint256)
+          handler: handlePoolCreated
+
+templates:
+  # Each facility is an EIP-1167 clone created at runtime, so pools are
+  # indexed by template rather than being listed as static data sources.
+  - kind: ethereum
+    name: Pool
+    network: arc-testnet
+    source:
+      abi: PoolContract
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/pool.ts
+      entities:
+        - Facility
+        - Lender
+        - Position
+        - Deposit
+        - Withdrawal
+        - Drawdown
+        - Repayment
+        - YieldClaim
+        - PrincipalClaim
+      abis:
+        - name: PoolContract
+          file: ./abis/PoolContract.json
+      eventHandlers:
+        # ERC-4626 shapes — a standardized tokenized-vault schema matches on
+        # these signatures.
+        - event: Deposit(indexed address,indexed address,uint256,uint256)
+          handler: handleDeposit
+        - event: Withdraw(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleWithdraw
+
+        # Credit lifecycle.
+        - event: DrawdownExecuted(indexed bytes32,indexed address,uint256)
+          handler: handleDrawdownExecuted
+        - event: Repaid(indexed bytes32,uint256,uint256)
+          handler: handleRepaid
+        - event: YieldClaimed(indexed address,uint256)
+          handler: handleYieldClaimed
+        - event: PrincipalClaimed(indexed address,uint256)
+          handler: handlePrincipalClaimed
+
+        # Status transitions.
+        - event: Locked(uint256,uint256,uint256,uint256)
+          handler: handleLocked
+        - event: FundingFailed()
+          handler: handleFundingFailed
+        - event: PoolClosed()
+          handler: handlePoolClosed
+        - event: DefaultDeclared()
+          handler: handleDefaultDeclared
