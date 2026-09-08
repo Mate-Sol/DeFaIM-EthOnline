@@ -2,20 +2,45 @@
 
 Four images. Everything targets Arc Testnet (chain `5042002`).
 
-| Service | Path | Port | Notes |
-|---|---|---|---|
-| Backend API | `server/` | 5090 | Node 22, needs MongoDB |
-| Lender client | `web/lender/` | 8081 | static, nginx |
-| PSP + admin portal | `web/portal/` | 8080 | static, nginx |
-| External PSP portal | `web/external-psp/` | 8082 | static, nginx |
+| Service | Path | Port | Deployment | Notes |
+|---|---|---|---|---|
+| Backend API | `server/` | 5090 | `defa-be` | Node 22, needs MongoDB |
+| Lender client | `web/lender/` | 8081 | `defa-ui` | static, nginx |
+| PSP + admin client | `web/portal/` | 8080 | `defa-admin` | static, nginx |
+| PSP order book | `web/external-psp/` | 8082 | `defa-psp` | static, nginx; optional |
+
+`web/portal` is **one application serving both the borrower and every admin
+role**. KAM, CAD, CRO, CFO, Legal, view-only admin and PSP all sign in at the
+same `/login`; the role on the account decides what they can reach. There is
+no separate admin build. The only separate entry point is
+`/onchain-admin/login`, which authenticates by wallet signature rather than
+password.
+
+`web/external-psp` is a standalone counterparty app, not part of the DeFa
+product surface. It was not deployed alongside the others previously; deploy
+it only if the external-PSP flow is being demonstrated.
+
+## Ingress
+
+Two public hostnames, matching the previous deployment's shape:
+
+| Hostname | Routes to |
+|---|---|
+| `defa-ethonline.invoicemate.net` | `/` → lender client · `/api` → backend |
+| `defa-ethonline-admin.invoicemate.net` | `/` → PSP + admin client |
+
+The backend mounts its routes at the root (`/auth`, `/pools`, `/admin`, …) and
+knows nothing about `/api`, so **the ingress must strip the `/api` prefix**
+before forwarding. This is the same arrangement as the previous deployment,
+where both clients pointed at the lender domain's `/api` path.
 
 All four build from their own `Dockerfile` with no build args:
 
 ```
-docker build -t defa-server        ./server
-docker build -t defa-lender        ./web/lender
-docker build -t defa-portal        ./web/portal
-docker build -t defa-external-psp  ./web/external-psp
+docker build -t defa-be     ./server
+docker build -t defa-ui     ./web/lender
+docker build -t defa-admin  ./web/portal
+docker build -t defa-psp    ./web/external-psp   # optional
 ```
 
 ## Frontend configuration
