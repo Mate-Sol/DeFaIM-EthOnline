@@ -12,6 +12,12 @@ broadcast/
 .env
 .env.*
 !.env.example
+# Frontend build-time config: Vite bakes VITE_* into the static bundle, so
+# these hold only public values (on-chain addresses, RPC, API URL) and must
+# be present at image build time.
+!web/lender/.env.production
+!web/portal/.env.production
+!web/external-psp/.env.production
 
 # Foundry
 contracts/out/
