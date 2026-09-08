@@ -339,13 +339,24 @@ const pspProfileSchema = new mongoose.Schema({
   // Per-facility approval lives on the Facility model.
   workflowStep: {
     type: String,
+    // Must cover every value the routes assign — mongoose validates enums on
+    // save, so a state the routes set but this list omits throws a
+    // ValidationError and silently blocks that step of the chain.
     enum: [
+      // Onboarding
       'KAM_REVIEW',
-      'CAD_REVIEW',
       'TERM_SHEET_STAGE',
+      'CAD_REVIEW',
       'TECH_INTEGRATION_STAGE',
       'CRO_REVIEW',
       'LEGAL_REVIEW',
+      // Facility approval
+      'PSP_FACILITY_APPROVAL',
+      'CAD_FACILITY_REVIEW',
+      'CAD_FINAL_APPROVAL',
+      'CRO_FINAL_CONFIRMATION',
+      // CRO has signed off; the on-chain admin creates the pool next.
+      'AWAITING_POOL_INIT',
       'FINALIZED'
     ],
     default: 'KAM_REVIEW'
