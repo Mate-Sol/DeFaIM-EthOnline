@@ -33,13 +33,14 @@ async function main() {
   if (!CODE) throw new Error('PUBLIC_DEMO_CODE env var is required');
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not set');
 
-  await mongoose.connect(process.env.MONGODB_URI);
+  const owned = mongoose.connection.readyState === 0;
+  if (owned) await mongoose.connect(process.env.MONGODB_URI);
   console.log(`Connected to ${mongoose.connection.name}`);
 
   const existing = await AccessCode.findOne({ code: CODE });
   if (existing) {
     console.log(`✓ code "${CODE}" already exists (created ${existing.createdAt.toISOString()}) — skipping`);
-    await mongoose.disconnect();
+    if (owned) await mongoose.disconnect();
     return;
   }
 
@@ -57,10 +58,17 @@ async function main() {
   });
 
   console.log(`✓ seeded code "${doc.code}"  label="${doc.label}"  expires=${doc.expiresAt ? doc.expiresAt.toISOString() : 'never'}`);
-  await mongoose.disconnect();
+  if (owned) await mongoose.disconnect();
 }
 
-main().catch((e) => {
-  console.error('seed failed:', e.message);
-  process.exit(1);
-});
+// Callable two ways: as a CLI script, and from the server at boot when the
+// deployment cannot exec into the container. When the caller already holds a
+// mongoose connection this reuses it and leaves it open.
+module.exports = main;
+
+if (require.main === module) {
+  main().catch((e) => {
+    console.error('seed failed:', e.message);
+    process.exit(1);
+  });
+}

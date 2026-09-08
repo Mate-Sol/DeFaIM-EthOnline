@@ -130,13 +130,29 @@ and lower `EVM_RPC_BATCH_PAUSE_MS` if you move to one.
 
 ## First run
 
-The backend needs seeding once against a fresh database:
+A fresh database needs seeding once. Set on the deployment:
 
 ```
-node scripts/seedAdmins.js                       # KAM / CAD / CRO / CFO / legal / viewer
-node scripts/seedSegments.js                     # risk segments
-PUBLIC_DEMO_CODE=654321 node scripts/seedPublicDemoCode.js
+SEED_DEMO_DATA=1
 ```
+
+The server then seeds itself after connecting — risk segments, the staff
+accounts (KAM / CAD / CRO / CFO / Legal / view-only), five borrower accounts
+with completed KYB profiles parked across the approval chain, and the lender
+access code `654321`. It is idempotent, so the variable can be left set; a
+failure there is logged and never stops the server starting.
+
+This exists so seeding needs no shell access to the container. If you do have
+`kubectl exec`, `node scripts/seedAll.js` does the same thing, and the
+individual scripts under `scripts/` still run standalone.
+
+Accounts, all after seeding:
+
+| Login | Password | Role |
+|---|---|---|
+| `kam@maildrop.cc`, `cad@`, `cro@`, `cfo@`, `legal@`, `viewer@` | `admin123` | staff |
+| `psp1@demo.invoicemate.net` … `psp5@` | `demo123` | borrowers |
+| access code `654321` | — | lender app |
 
 ## Health
 

@@ -16,6 +16,7 @@ if (process.env.SENTRY_DSN) {
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 
 // Initialize express app
@@ -23,6 +24,17 @@ const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+// Populate a fresh database without needing to exec into the container:
+// set SEED_DEMO_DATA=1 on the deployment. Idempotent, and a failure here
+// never prevents the server from starting.
+if (process.env.SEED_DEMO_DATA === '1') {
+  mongoose.connection.once('open', () => {
+    require('./scripts/seedAll')()
+      .then(() => console.log('[seed] demo data ready'))
+      .catch((e) => console.error('[seed] failed:', e.message));
+  });
+}
 
 // Initialize scheduled jobs (credit maintenance)
 const { initializeScheduledJobs } = require('./config/scheduler');

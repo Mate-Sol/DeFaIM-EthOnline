@@ -48,7 +48,8 @@ async function main() {
   if (!process.env.MONGODB_URI) {
     throw new Error('MONGODB_URI not set; check server/.env');
   }
-  await mongoose.connect(process.env.MONGODB_URI);
+  const owned = mongoose.connection.readyState === 0;
+  if (owned) await mongoose.connect(process.env.MONGODB_URI);
   console.log(`Connected to ${mongoose.connection.name}`);
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
@@ -70,10 +71,17 @@ async function main() {
   }
   console.log('─'.repeat(72));
 
-  await mongoose.disconnect();
+  if (owned) await mongoose.disconnect();
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Callable two ways: as a CLI script, and from the server at boot when the
+// deployment cannot exec into the container. When the caller already holds a
+// mongoose connection this reuses it and leaves it open.
+module.exports = main;
+
+if (require.main === module) {
+  main().catch((e) => {
+    console.error('seed failed:', e.message);
+    process.exit(1);
+  });
+}

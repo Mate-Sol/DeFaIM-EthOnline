@@ -171,7 +171,8 @@ function profileFor(spec, userId) {
 
 async function seed() {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/defa';
-  await mongoose.connect(uri);
+  const owned = mongoose.connection.readyState === 0;
+  if (owned) await mongoose.connect(uri);
   console.log('Connected to', mongoose.connection.name);
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
@@ -215,10 +216,17 @@ async function seed() {
   console.log(line);
   console.log(`  ${PSPS.length} borrower accounts ready. Password: ${PASSWORD}`);
   console.log(line);
-  await mongoose.disconnect();
+  if (owned) await mongoose.disconnect();
 }
 
-seed().catch((e) => {
-  console.error('seed failed:', e.message);
-  process.exit(1);
-});
+// Callable two ways: as a CLI script, and from the server at boot when the
+// deployment cannot exec into the container. When the caller already holds a
+// mongoose connection this reuses it and leaves it open.
+module.exports = seed;
+
+if (require.main === module) {
+  seed().catch((e) => {
+    console.error('seed failed:', e.message);
+    process.exit(1);
+  });
+}
