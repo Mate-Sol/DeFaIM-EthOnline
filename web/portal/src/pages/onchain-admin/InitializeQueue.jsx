@@ -21,7 +21,12 @@ const FUNDING_WINDOWS = [
   { label: '1 day', secs: 86400 },
   { label: '7 days', secs: 7 * 86400 },
 ];
-const DEFAULT_FUNDING_SECS = 7 * 86400;
+// Default to the shortest window. It is the only one that always satisfies the
+// factory's APR-coverability check, which counts the funding window as part of
+// the facility's life — on a fast-clock factory a longer window is sixty-plus
+// contract days and is rejected outright. Widening it is a deliberate choice,
+// not something an operator should back into by accepting a default.
+const DEFAULT_FUNDING_SECS = 600;
 
 const fmtUsd = (n) =>
   new Intl.NumberFormat('en-US', {
