@@ -55,6 +55,12 @@ const PoolDetails = () => {
         // If no pool exists yet, set defaults
         setDeal({
           ...deal,
+          // The deposit and redeem panels resolve the pool from `pubkey`.
+          // The marketplace calls it `poolAddress`, and a freshly created pool
+          // may not be indexed yet, so fall back to the route param — which is
+          // the pool address. Without this, opening a pool by URL rather than
+          // by clicking its card fails with "Pool address missing on this view".
+          pubkey: deal?.poolAddress || dealId,
           amountCollected: 0,
           isLendedByThisUser: !!isLendedByThisUser,
           poolMatureTime: 0,
@@ -71,6 +77,7 @@ const PoolDetails = () => {
         // Update deal state
         setDeal({
           ...deal,
+          pubkey: deal?.pubkey || deal?.poolAddress || dealId,
           isLendedByThisUser: !!isLendedByThisUser,
         });
       }
