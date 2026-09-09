@@ -40,10 +40,20 @@ const facility = {
   },
 };
 
-test('INIT-TERMS · caps surface from approvedTerms', () => {
+test('INIT-TERMS · caps surface from approvedTerms, in base units', () => {
+  // A 20 USDC credit line is stored as the number 20, but the encoder reads a
+  // bare integer as already being in base units — so an unconverted 20 would
+  // cap the pool at 0.000020 USDC and no lender could fund it.
   const merged = mergeFacilityTerms(facility, {});
-  assert.strictEqual(merged.softCap, 20, 'softCap must not be undefined');
-  assert.strictEqual(merged.hardCap, 20, 'hardCap must not be undefined');
+  assert.strictEqual(merged.softCap, 20_000_000n, 'softCap must be 20 USDC in base units');
+  assert.strictEqual(merged.hardCap, 20_000_000n, 'hardCap must be 20 USDC in base units');
+});
+
+test('INIT-TERMS · fractional USDC caps convert exactly', () => {
+  const f = { ...facility, approvedTerms: { ...facility.approvedTerms, softCap: 20.5, hardCap: 99.999999 } };
+  const merged = mergeFacilityTerms(f, {});
+  assert.strictEqual(merged.softCap, 20_500_000n);
+  assert.strictEqual(merged.hardCap, 99_999_999n);
 });
 
 test('INIT-TERMS · CRO rates reach the encoder, not the defaults', () => {
@@ -82,7 +92,9 @@ test('INIT-TERMS · an unset approved term falls back to the requested one', () 
   assert.strictEqual(mergeFacilityTerms(f, {}).graceDays, 3);
 });
 
-test('INIT-TERMS · explicit request body overrides everything', () => {
+test('INIT-TERMS · explicit request body overrides everything, unconverted', () => {
+  // The raw-params path has always expressed amounts in base units, so an
+  // override must pass through exactly as the caller wrote it.
   const merged = mergeFacilityTerms(facility, { softCap: 5, hardCap: 50 });
   assert.strictEqual(merged.softCap, 5);
   assert.strictEqual(merged.hardCap, 50);

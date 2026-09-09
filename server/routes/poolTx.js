@@ -71,6 +71,19 @@ function validAddr(x) {
 const DEFAULT_FUNDING_DURATION_SECS =
   Number(process.env.POOL_FUNDING_DURATION_SECS) || 7 * 86400;
 
+// Facility terms are denominated in whole USDC (a 20 USDC credit line is the
+// number 20). toBase() below reads a bare integer as *already* being in base
+// units, so handing it 20 would deploy a pool capped at 0.000020 USDC. Anything
+// sourced from the Facility doc goes through here instead.
+const USDC_DECIMALS = 6;
+function usdcToBase(amount) {
+  if (amount === null || amount === undefined || amount === '') return undefined;
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  // Round at the token's precision rather than trusting binary floats.
+  return BigInt(Math.round(n * 10 ** USDC_DECIMALS));
+}
+
 function toBase(amount) {
   if (amount === null || amount === undefined) return null;
   if (typeof amount === 'bigint') return amount;
@@ -561,7 +574,17 @@ function mergeFacilityTerms(fac, body) {
     if (approved[k] === null || approved[k] === undefined) delete approved[k];
   }
   const terms = { ...(fac.requestedTerms || {}), ...approved };
-  return { ...fac, ...terms, ...body };
+  const merged = { ...fac, ...terms, ...body };
+
+  // Convert the USDC-denominated caps to base units. Only when they came from
+  // the facility — an explicit request-body override keeps the caller's own
+  // convention, which the raw-params path has always expressed in base units.
+  for (const k of ['softCap', 'hardCap']) {
+    if (body[k] !== undefined) continue;
+    const base = usdcToBase(merged[k]);
+    if (base !== undefined) merged[k] = base;
+  }
+  return merged;
 }
 
 /**
@@ -595,7 +618,10 @@ router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) 
 
     const softCapBase    = toBase(body.softCap);
     const hardCapBase    = toBase(body.hardCap);
-    const minDepositBase = toBase(body.minDeposit || '1');
+    // Default to 1 USDC, not the 1 base unit (0.000001 USDC) that '1' used to
+    // mean here — that is not a meaningful floor on a deposit.
+    const minDepositBase =
+      body.minDeposit !== undefined ? toBase(body.minDeposit) : usdcToBase(1);
     if (softCapBase === null || hardCapBase === null) {
       return res.status(400).json({ message: 'softCap / hardCap required' });
     }
