@@ -116,8 +116,38 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
             {orders === null ? (
               <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin" /></div>
             ) : orders.length === 0 ? (
-              <div className="text-center py-10 text-sm text-white/70">
-                No open orders right now.
+              // The seeded external orderbook is a demo convenience, not a
+              // precondition for borrowing. Without this the picker dead-ends
+              // and the borrower cannot draw against a perfectly good facility
+              // just because no order happens to be listed.
+              <div className="space-y-3">
+                <div className="text-sm text-white/70">
+                  No open customer orders are listed right now. You can still draw
+                  against the facility's available liquidity.
+                </div>
+                <button
+                  onClick={() =>
+                    setPicked({
+                      id: 'liquidity',
+                      orderReference: `DD-${Date.now()}`,
+                      amount: availableUsdc,
+                      settlementDate: null,
+                    })
+                  }
+                  disabled={submitting || !(availableUsdc > 0)}
+                  className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                    picked?.id === 'liquidity'
+                      ? 'border-white bg-white/15'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="text-xs uppercase tracking-widest text-white/60">
+                    Draw against liquidity
+                  </div>
+                  <div className="text-base font-bold tabular-nums mt-1">
+                    up to {fmtUsd(availableUsdc)}
+                  </div>
+                </button>
               </div>
             ) : (
               <div className="space-y-2">
@@ -186,9 +216,11 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
                 <FileText className="w-4 h-4" />
                 <div className="font-semibold text-sm font-mono">{picked.orderReference}</div>
               </div>
-              <div className="text-[11px] text-white/70 leading-relaxed">
-                Settles {new Date(picked.settlementDate).toLocaleDateString()}
-              </div>
+              {picked.settlementDate && (
+                <div className="text-[11px] text-white/70 leading-relaxed">
+                  Settles {new Date(picked.settlementDate).toLocaleDateString()}
+                </div>
+              )}
               <div className="text-2xl font-bold tabular-nums mt-2">{fmtUsd(picked.amount)}</div>
             </div>
 
