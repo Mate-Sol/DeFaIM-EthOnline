@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { waitForReceipt } from "@/libs/utils/txReceipt";
 import Button from "../components/ui/Button";
 import { Zap } from "lucide-react";
 import { toast } from "react-toastify";
@@ -72,11 +73,16 @@ const DepositForm = ({ currency = "USDC", apy = "12.00", deal }) => {
   const sendOneStep = async (step) => {
     const { tx } = step || {};
     if (!tx?.to || !tx?.data) throw new Error("Malformed step from server");
-    return sendTransactionAsync({
+    const hash = await sendTransactionAsync({
       to: tx.to,
       data: tx.data,
       value: tx.value ? BigInt(tx.value) : 0n,
     });
+    // Resolves on broadcast, so a revert would otherwise be reported as a
+    // successful deposit — and the next step would run against a pool that
+    // never received the funds.
+    await waitForReceipt(hash);
+    return hash;
   };
 
   const handleSubmit = async () => {

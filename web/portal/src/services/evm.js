@@ -31,6 +31,7 @@
  */
 
 import axios from 'axios';
+import { waitForReceipt } from './txReceipt';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
@@ -140,6 +141,9 @@ export async function sendCalldata(address, sendTransactionAsync, tx) {
     // wagmi accepts string / bigint / hex for value; the server sends string
     value: tx.value ? BigInt(tx.value) : 0n,
   });
+  // sendTransactionAsync resolves on broadcast, not on mining. Without this
+  // wait a reverted transaction is reported to the user as a success.
+  await waitForReceipt(hash);
   return hash;
 }
 

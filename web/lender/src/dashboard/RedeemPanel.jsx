@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { waitForReceipt } from "@/libs/utils/txReceipt";
 import { useAccount, useSendTransaction } from "wagmi";
 import { toast } from "react-toastify";
 import { Loader2, HandCoins } from "lucide-react";
@@ -27,11 +28,13 @@ const RedeemPanel = ({ deal, currency = "USDC" }) => {
   const sendOneStep = async (step) => {
     const { tx } = step || {};
     if (!tx?.to || !tx?.data) throw new Error("Malformed step from server");
-    return sendTransactionAsync({
+    const hash = await sendTransactionAsync({
       to: tx.to,
       data: tx.data,
       value: tx.value ? BigInt(tx.value) : 0n,
     });
+    await waitForReceipt(hash);
+    return hash;
   };
 
   const handleRedeem = async () => {
