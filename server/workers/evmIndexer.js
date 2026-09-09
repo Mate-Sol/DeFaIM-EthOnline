@@ -37,6 +37,7 @@ const {
 } = require('../services/poolServiceEvm');
 
 const { PoolState, DrawdownState } = require('../models/PoolState');
+const Facility = require('../models/Facility');
 
 const INTERVAL_MS   = parseInt(process.env.EVM_INDEXER_INTERVAL_MS  || '30000', 10);
 const WINDOW_BLOCKS = parseInt(process.env.EVM_INDEXER_WINDOW_BLOCKS || '5000',  10);
@@ -168,6 +169,23 @@ async function tick() {
           },
         },
         { upsert: true }
+      );
+
+      // Mirror the new pool onto the Facility that asked for it.
+      //
+      // Nothing else does this. The CRO step blanks poolPda and no later write
+      // ever fills it, which breaks two things: the facility never leaves the
+      // on-chain admin's Initialize Queue, so a deployed facility keeps
+      // inviting a second createPool that can only fail with "PSP has live
+      // pool"; and /psp/exec/drawdown resolves the pool address off this
+      // field, so drawdowns against a freshly created pool have nowhere to go.
+      //
+      // Matched on the borrower's wallet, narrowed to a facility still waiting
+      // for its pool, so re-indexing an old event cannot rebind a facility
+      // that already has one.
+      await Facility.findOneAndUpdate(
+        { pspWallet, poolPda: '', status: 'AWAITING_POOL_INIT' },
+        { $set: { poolPda: poolAddr, vaultPda: poolAddr, status: 'FUNDING' } }
       );
     }
 
