@@ -510,16 +510,37 @@ router.get('/psp/facilities', authMiddleware, authorizeRoles('PSP'), async (req,
     for (const addr of addresses) {
       try {
         const doc = cached.get(addr);
+
+        // Decide ownership from the indexed record when we have one, at any
+        // age — the borrower's wallet is set once at creation and never
+        // changes, so a stale document is still authoritative for *whose* pool
+        // this is. Only reach for the chain when there is no record at all,
+        // which is the case this endpoint exists to cover.
+        const ownerFromDoc = doc?.pspWallet;
+        const isMine = ownerFromDoc
+          ? ownerFromDoc.toLowerCase() === wallet.toLowerCase()
+          : (await svc.readPoolState(addr)).pspWallet?.toLowerCase() === wallet.toLowerCase();
+        if (!isMine) continue;
+
+        // Only the figures need to be fresh, and a failed refresh should not
+        // hide a facility the borrower owns — fall back to the cached numbers.
         const fresh = doc?.lastIndexedAt
           && (Date.now() - new Date(doc.lastIndexedAt).getTime()) < STALE_MS;
-        const shaped = fresh
-          ? shapePoolFromDoc(doc)
-          : shapePoolResponse(doc, await svc.readPoolState(addr));
-        if ((shaped.pspWallet || '').toLowerCase() === wallet.toLowerCase()) {
-          shaped.countActiveDrawdowns =
-            await DrawdownState.countDocuments({ pool: addr, repaid: false });
-          mine.push(shaped);
+        let shaped;
+        if (fresh) {
+          shaped = shapePoolFromDoc(doc);
+        } else {
+          try {
+            shaped = shapePoolResponse(doc, await svc.readPoolState(addr));
+          } catch {
+            shaped = doc ? shapePoolFromDoc(doc) : null;
+          }
         }
+        if (!shaped) continue;
+
+        shaped.countActiveDrawdowns =
+          await DrawdownState.countDocuments({ pool: addr, repaid: false });
+        mine.push(shaped);
       } catch (e) {
         console.warn('[psp/facilities] skipping', addr, e.message);
       }
