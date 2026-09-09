@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAccount, useSendTransaction } from 'wagmi';
+import { useAccount, useSendTransaction, useReadContract } from 'wagmi';
 import {
   ArrowLeft, RefreshCw, Loader2, ExternalLink, Zap,
   ShieldOff, Pause, AlertTriangle, CheckCircle2, Clock, ArrowDownLeft, ArrowUpRight, AlertCircle,
@@ -12,6 +12,22 @@ import { api, buildAndSend } from '../../services/evm';
 import { fmtDayIndex, fmtCountdown, isWarpMode } from '../../utils/dateFmt';
 import { isSettledFromPool } from '../../utils/poolStatus';
 import ValidationPipeline from '../../components/defa/ValidationPipeline';
+
+// keccak256("MULTISIG_ROLE") — the role payfi_v1 gates pool admin calls behind.
+const MULTISIG_ROLE =
+  '0xa5a0b70b385ff7611cd3840916bd08b10829e5bf9e6637cf79dd9a427fc0e2ab';
+const MULTISIG_GATE_ABI = [
+  {
+    name: 'hasRole',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'role', type: 'bytes32' },
+      { name: 'account', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+];
 
 const fmtUsdc = (base) => {
   if (base === undefined || base === null) return '$0';
@@ -83,14 +99,22 @@ const FacilityDetail = () => {
     return { today, tenorEnd, tenorExpired, defaultEligible, softCapMet, isSettled };
   }, [state, pending]);
 
-  // Wallet-pubkey gate. Admin actions sign txs as `state.admin`. If the
-  // browser wallet is something else (e.g. a lender wallet that wandered
-  // in here), the chain would reject the tx anyway — but we hide the buttons
-  // to make the security boundary explicit.
-  const walletMatchesAdmin = useMemo(() => {
-    if (!state || !address) return false;
-    return address.toLowerCase() === String(state.admin || '').toLowerCase();
-  }, [state, address]);
+  // Wallet gate. Admin actions are gated on chain by MULTISIG_ROLE, so ask the
+  // pool directly rather than comparing addresses.
+  //
+  // This used to compare against `state.admin`, which the API shapes as
+  // `mongoDoc.admin || state.pspWallet`. No pool document carries an `admin`,
+  // so it always fell back to the *borrower's* wallet — meaning the on-chain
+  // admin could never match its own pool and every action on this page stayed
+  // hidden behind "Connected wallet does not match this pool's admin signer".
+  const { data: hasMultisigRole } = useReadContract({
+    address: poolPubkey,
+    abi: MULTISIG_GATE_ABI,
+    functionName: 'hasRole',
+    args: address ? [MULTISIG_ROLE, address] : undefined,
+    query: { enabled: Boolean(poolPubkey && address) },
+  });
+  const walletMatchesAdmin = Boolean(hasMultisigRole);
 
   // Lifetime yield aggregates. Earned + Redeemed are sourced from the
   // server-side /fee-aggregates endpoint, which paginates the entire
