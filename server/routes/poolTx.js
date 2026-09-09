@@ -59,6 +59,18 @@ function validAddr(x) {
  * USDC has 6 decimals. FE already scales; we also tolerate decimal-string
  * inputs (e.g. "12.34") for CLI/curl convenience.
  */
+// How long a new pool accepts deposits before it can be locked.
+//
+// This is wall-clock seconds, so it must track the clock of the factory in
+// PAYFI_FACTORY_ADDRESS. The contracts cannot be locked early — finalizeFunding
+// requires block.timestamp >= fMaturityTs — so a 7-day window on a fast-clock
+// factory (MathLib.SECONDS_PER_DAY = 60, where a contract "day" is a real
+// minute) would leave the pool unlockable for a real week and strand the demo.
+// Fast-clock deployments set POOL_FUNDING_DURATION_SECS to a few minutes.
+// Capped by the factory's maxFundingDurationSecs (30 days).
+const DEFAULT_FUNDING_DURATION_SECS =
+  Number(process.env.POOL_FUNDING_DURATION_SECS) || 7 * 86400;
+
 function toBase(amount) {
   if (amount === null || amount === undefined) return null;
   if (typeof amount === 'bigint') return amount;
@@ -529,6 +541,30 @@ router.post('/admin/build-tx/revoke-psp', authMiddleware, async (req, res) => {
 });
 
 /**
+ * Flatten a Facility doc into the flat param bag the encoder expects.
+ *
+ * Terms live nested under `requestedTerms` (what the PSP asked for) and
+ * `approvedTerms` (what the CRO locked). Spreading only the facility's
+ * top-level fields leaves softCap, hardCap, tenure and every rate undefined,
+ * which fails the cap check in the route and — worse, if caps were supplied by
+ * hand — would deploy the pool on the encoder's default rates rather than the
+ * approved ones.
+ *
+ * Precedence: facility top-level < requested terms < CRO-approved terms <
+ * explicit request body.
+ */
+function mergeFacilityTerms(fac, body) {
+  // Strip the approved layer's blanks before it overlays the requested one —
+  // a term the CRO left unset must not shadow the value the PSP supplied.
+  const approved = { ...(fac.approvedTerms || {}) };
+  for (const k of Object.keys(approved)) {
+    if (approved[k] === null || approved[k] === undefined) delete approved[k];
+  }
+  const terms = { ...(fac.requestedTerms || {}), ...approved };
+  return { ...fac, ...terms, ...body };
+}
+
+/**
  * Deploy + initialize a new pool via factory.createPool. Body accepts
  * either raw params or a facilityId to pull terms from the Facility
  * Mongo doc (whichever the FE finds convenient).
@@ -546,7 +582,7 @@ router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) 
     if (body.facilityId) {
       const fac = await Facility.findById(body.facilityId).lean();
       if (!fac) return res.status(404).json({ message: 'Facility not found' });
-      body = { ...fac, ...body }; // req body overrides Mongo defaults
+      body = mergeFacilityTerms(fac, body);
     }
 
     const pspAddr      = validAddr(body.pspWallet);
@@ -566,10 +602,10 @@ router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) 
 
     const params = [
       pspAddr,
-      BigInt(body.fundingDurationSecs || 7 * 86400), // default 7 days funding
+      BigInt(body.fundingDurationSecs || DEFAULT_FUNDING_DURATION_SECS),
       softCapBase,
       hardCapBase,
-      BigInt(body.tenure || 30),                     // default 30-day tenure
+      BigInt(body.tenure || body.tenorDays || 30),   // approvedTerms names it tenorDays
       bpsToWad(body.idleRateDailyBps     ?? body.commitmentRateBps     ?? 5),   // 5 bps/day = 0.05%
       bpsToWad(body.utilizedRateDailyBps ?? body.utilizationRateBps    ?? 20),
       bpsToWad(body.penaltyRateDailyBps  ?? body.penaltyRateBps        ?? 50),
@@ -705,3 +741,5 @@ router.get('/pool/:pool/daily-activity', NOT_IMPLEMENTED('B3c'));
 router.get('/pool/:pool/fee-aggregates', NOT_IMPLEMENTED('B3c'));
 
 module.exports = router;
+// Exported for unit tests; the route is the only production caller.
+module.exports.mergeFacilityTerms = mergeFacilityTerms;

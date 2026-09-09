@@ -116,6 +116,9 @@
 }
 .defa-input::placeholder { color: rgba(255, 255, 255, 0.5); }
 .defa-input:focus { border-color: rgba(255, 255, 255, 0.55); }
+/* A native <select> popup paints on the OS surface, not on the card, so the
+   white text inherited above would be invisible against Chrome's white list. */
+.defa-input option { color: #0f172a; background: #ffffff; }
 
 .defa-label {
   font-size: 11px;

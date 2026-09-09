@@ -131,12 +131,13 @@ const Sidebar = () => {
         });
       }
 
-      // Pool Init queue — facilities CRO has approved that still need an
-      // on-chain admin to sign `initialize_pool`.
+      // Pool init queue — facilities the CRO has approved that still need an
+      // on-chain admin to sign pool creation. Staff see it read-only; signing
+      // happens under /onchain-admin, which authenticates by wallet.
       if (["KAM", "CAD", "CRO", "CFO", "LEGAL_ADMIN"].includes(role)) {
         links.push({
           name: "Pool Initializations",
-          path: "/admin/pool-inits",
+          path: "/onchain-admin/initialize",
           icon: <Zap className="w-5 h-5" />,
         });
       }

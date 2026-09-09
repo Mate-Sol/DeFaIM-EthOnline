@@ -5,6 +5,24 @@ import toast from 'react-hot-toast';
 import OnChainAdminLayout from './Layout';
 import { api, buildAndSend } from '../../services/evm';
 
+/**
+ * How long the new pool accepts deposits before it can be locked.
+ *
+ * The pool cannot be locked early — finalizeFunding requires
+ * block.timestamp >= fMaturityTs — so this window is also the earliest the
+ * facility can go live. It is wall-clock seconds and must therefore match the
+ * clock of the factory the backend is pointed at: on a fast-clock deployment
+ * (where a contract "day" is a real minute) a 7-day window would leave the
+ * pool unlockable for a real week.
+ */
+const FUNDING_WINDOWS = [
+  { label: '10 minutes', secs: 600 },
+  { label: '1 hour', secs: 3600 },
+  { label: '1 day', secs: 86400 },
+  { label: '7 days', secs: 7 * 86400 },
+];
+const DEFAULT_FUNDING_SECS = 7 * 86400;
+
 const fmtUsd = (n) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency', currency: 'USD', maximumFractionDigits: 0,
@@ -27,6 +45,8 @@ const InitializeQueue = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(null);
+  // facility._id -> funding window in seconds
+  const [fundingSecs, setFundingSecs] = useState({});
 
   const refresh = async () => {
     try {
@@ -61,7 +81,10 @@ const InitializeQueue = () => {
       const init = await buildAndSend(
         address, sendTransactionAsync,
         '/admin/build-tx/initialize-pool',
-        { facilityId: facility._id },
+        {
+          facilityId: facility._id,
+          fundingDurationSecs: fundingSecs[facility._id] ?? DEFAULT_FUNDING_SECS,
+        },
       );
       toast.success(`Pool deployed · tx ${init.hash.slice(0, 10)}…`, { id: 'init' });
       // Indexer takes ~90s to mirror; refresh in the background so the row
@@ -141,6 +164,32 @@ const InitializeQueue = () => {
                       value={`${t.penaltyRateBps || 0} bps/d`}
                     />
                   </div>
+
+                  <label className="block mb-4">
+                    <span className="text-xs uppercase tracking-widest text-white/60">
+                      Funding window
+                    </span>
+                    <select
+                      value={fundingSecs[f._id] ?? DEFAULT_FUNDING_SECS}
+                      onChange={(e) =>
+                        setFundingSecs((prev) => ({
+                          ...prev,
+                          [f._id]: Number(e.target.value),
+                        }))
+                      }
+                      className="defa-input w-full mt-1"
+                    >
+                      {FUNDING_WINDOWS.map((w) => (
+                        <option key={w.secs} value={w.secs}>
+                          {w.label}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-xs text-white/50 mt-1 block">
+                      Deposits close after this; the pool can only be locked once
+                      it elapses.
+                    </span>
+                  </label>
 
                   <button
                     onClick={() => handleInitialize(f)}
