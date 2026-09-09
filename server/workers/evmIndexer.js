@@ -189,6 +189,37 @@ async function tick() {
       );
     }
 
+    // 1b. Reconcile facilities whose pool was created outside the event window.
+    //
+    // Step 1 only sees PoolCreated inside the last WINDOW_BLOCKS. That is a
+    // rolling ~45 minutes, so a pool created while the indexer was down, or
+    // before this binding existed, is never bound — and because
+    // /psp/exec/drawdown resolves the pool from Facility.poolPda, that
+    // borrower can never draw down, with nothing to indicate why.
+    //
+    // The factory's psps() mapping is authoritative and has no such window, so
+    // ask it directly for anything still unbound.
+    const unbound = await Facility.find({
+      status: 'AWAITING_POOL_INIT',
+      poolPda: '',
+      pspWallet: { $nin: [null, ''] },
+    }).select('_id pspWallet').lean();
+
+    for (const fac of unbound) {
+      try {
+        const rec = await factory.psps(fac.pspWallet);
+        const activePool = rec?.activePool ?? rec?.[1];
+        if (!activePool || activePool === ethers.ZeroAddress) continue;
+        await Facility.updateOne(
+          { _id: fac._id, poolPda: '' },
+          { $set: { poolPda: activePool, vaultPda: activePool, status: 'FUNDING' } }
+        );
+        console.log(`[evmIndexer] bound facility ${fac._id} -> pool ${activePool}`);
+      } catch (e) {
+        console.warn(`[evmIndexer] reconcile failed for ${fac._id}: ${e.message}`);
+      }
+    }
+
     // 2. Snapshot state for every known pool
     const knownPools = await PoolState.find({}).select('pubkey').lean();
     for (const { pubkey } of knownPools) {
