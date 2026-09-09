@@ -57,6 +57,7 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
   const projTotalRepay = amtNum + projTotalFee;
 
   const handleSubmit = async () => {
+    if (!pool) { toast.error('No pool on this facility yet'); return; }
     if (!picked) { toast.error('Pick an order first'); return; }
     if (!(amtNum > 0)) { toast.error('Enter an amount to draw'); return; }
     if (overLiquidity) { toast.error(`Only ${fmtUsd(availableUsdc)} is available to draw`); return; }
@@ -64,6 +65,9 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
     setSubmitting(true);
     try {
       const { data } = await api().post('/pool/psp/exec/drawdown', {
+        // The borrower may hold several facilities, so the server resolves
+        // which one from the pool address rather than guessing.
+        pool,
         // Base units — the API reads a bare integer as already scaled.
         amount: BigInt(Math.round(amtNum * 1e6)).toString(),
         tenorDays: tenorNum,
