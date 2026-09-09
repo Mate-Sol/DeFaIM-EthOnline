@@ -336,6 +336,39 @@ function encodeCreatePool(params) {
   );
 }
 
+/**
+ * Dry-run factory.createPool before handing the caller calldata to sign.
+ *
+ * The factory enforces a set of constraints that are easy to trip and
+ * expensive to discover the hard way — the economic envelope, cap ordering,
+ * the "PSP already has a live pool" gate, and the APR coverability invariant
+ *
+ *     aprAnnual * maxTenureSecs <= utilizedRateDaily * 365 * tenure * D
+ *
+ * where maxTenureSecs includes the funding window. That last one makes the
+ * funding duration load-bearing: widening it can push a set of terms that was
+ * fine over the line. Without this check the caller signs, pays gas, and gets
+ * a bare "execution reverted" from the wallet.
+ *
+ * Returns null when the call would succeed, or the revert reason string.
+ */
+async function simulateCreatePool(params, from) {
+  try {
+    const factory = getFactory();
+    await factory.createPool.staticCall(params, from ? { from } : {});
+    return null;
+  } catch (e) {
+    return (
+      e?.reason ||
+      e?.revert?.args?.[0] ||
+      e?.shortMessage ||
+      e?.info?.error?.message ||
+      e?.message ||
+      'createPool would revert'
+    );
+  }
+}
+
 // ── Server-signed operations (AGENT_PRIVATE_KEY holds AGENT2_ROLE) ─────
 
 /**
@@ -406,6 +439,7 @@ module.exports = {
   encodeApprovePsp,
   encodeRevokePsp,
   encodeCreatePool,
+  simulateCreatePool,
 
   // Server-signed operations
   serverExecuteDrawdown,

@@ -645,6 +645,19 @@ router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) 
       agent1Addr, agent2Addr, multisigAddr,
     ];
 
+    // Dry-run before handing back calldata. The factory's constraints — the
+    // economic envelope, the live-pool gate, and the APR coverability
+    // invariant that makes the funding window load-bearing — otherwise only
+    // surface after the operator has signed and paid gas, as a bare
+    // "execution reverted" in the wallet.
+    const revertReason = await svc.simulateCreatePool(params, req.user.wallet);
+    if (revertReason) {
+      return res.status(400).json({
+        message: `Pool would be rejected by the factory: ${revertReason}`,
+        reason: revertReason,
+      });
+    }
+
     const tx = svc.encodeCreatePool(params);
     res.json({
       to: tx.to, data: tx.data, value: tx.value.toString(),
