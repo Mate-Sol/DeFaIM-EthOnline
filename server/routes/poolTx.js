@@ -147,6 +147,7 @@ function shapePoolResponse(mongoDoc, state) {
     activatedDay:         state.poolStartTs > 0n    ? Number(state.poolStartTs    / 86400n) : 0,
     totalCapital:         state.principal.toString(),
     outstandingPrincipal: state.outstanding.toString(),
+    fMaturityTs:          state.fMaturityTs.toString(),
     availableToDd:        state.availableToDd.toString(),
     yieldOwed:            state.yieldOwed.toString(),
     fundingCredit:        state.fundingCredit.toString(),

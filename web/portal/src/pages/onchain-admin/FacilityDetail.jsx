@@ -93,10 +93,14 @@ const FacilityDetail = () => {
     const totalCapital = BigInt(state.totalCapital);
     const softCap = BigInt(state.softCap);
     const softCapMet = totalCapital >= softCap;
+    // finalizeFunding is a no-op until the funding window closes, so executing
+    // early costs gas and changes nothing. Gate on the window, not just the cap.
+    const fMaturityTs = Number(state?.fMaturityTs || 0);
+    const fundingClosed = fMaturityTs > 0 && Math.floor(Date.now() / 1000) >= fMaturityTs;
 
     const isSettled = isSettledFromPool(state, pending);
 
-    return { today, tenorEnd, tenorExpired, defaultEligible, softCapMet, isSettled };
+    return { today, tenorEnd, tenorExpired, defaultEligible, softCapMet, fundingClosed, isSettled };
   }, [state, pending]);
 
   // Wallet gate. Admin actions are gated on chain by MULTISIG_ROLE, so ask the
@@ -327,8 +331,14 @@ const FacilityDetail = () => {
             {!state.isActive && !state.isCancelled && !state.isDefaulted && (
               <>
                 <ActionBtn
-                  label={stats.softCapMet ? 'Execute Facility' : `Execute (need ${fmtUsdc(BigInt(state.softCap) - BigInt(state.totalCapital))} more)`}
-                  enabled={stats.softCapMet}
+                  label={
+                    !stats.softCapMet
+                      ? `Execute (need ${fmtUsdc(BigInt(state.softCap) - BigInt(state.totalCapital))} more)`
+                      : !stats.fundingClosed
+                        ? 'Execute (funding window still open)'
+                        : 'Execute Facility'
+                  }
+                  enabled={stats.softCapMet && stats.fundingClosed}
                   busy={signing === 'execute'}
                   onClick={() => runAction('execute', '/pool/admin/build-tx/execute-facility')}
                 />
