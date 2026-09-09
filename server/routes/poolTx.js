@@ -496,13 +496,36 @@ router.get('/psp/facilities', authMiddleware, authorizeRoles('PSP'), async (req,
     const wallet = walletOf(profile);
     if (!wallet) return res.status(409).json({ message: 'PSP wallet not bound' });
 
-    // Addresses are stored as whatever casing the source produced, so match
-    // case-insensitively rather than relying on consistent checksumming.
-    const docs = await PoolState.find({
-      pspWallet: new RegExp(`^${wallet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-    }).lean();
+    // Enumerate from the chain and use Mongo only as a cache, the same way
+    // /pools does. Querying the indexed collection alone made a freshly
+    // created pool invisible to its own borrower until the indexer caught up —
+    // and since the drawdown scan iterates the same collection, that pool's
+    // drawdowns never appeared either, so the borrower had no route to repay.
+    const STALE_MS = parseInt(process.env.POOL_CACHE_STALE_MS || '180000', 10);
+    const docs = await PoolState.find({ pubkey: /^0x/ }).lean();
+    const cached = new Map(docs.map((d) => [d.pubkey, d]));
 
-    res.json(docs.map(shapePoolFromDoc));
+    const addresses = await svc.readAllPools();
+    const mine = [];
+    for (const addr of addresses) {
+      try {
+        const doc = cached.get(addr);
+        const fresh = doc?.lastIndexedAt
+          && (Date.now() - new Date(doc.lastIndexedAt).getTime()) < STALE_MS;
+        const shaped = fresh
+          ? shapePoolFromDoc(doc)
+          : shapePoolResponse(doc, await svc.readPoolState(addr));
+        if ((shaped.pspWallet || '').toLowerCase() === wallet.toLowerCase()) {
+          shaped.countActiveDrawdowns =
+            await DrawdownState.countDocuments({ pool: addr, repaid: false });
+          mine.push(shaped);
+        }
+      } catch (e) {
+        console.warn('[psp/facilities] skipping', addr, e.message);
+      }
+    }
+
+    res.json(mine);
   } catch (e) {
     console.error('[psp/facilities]', e);
     res.status(500).json({ message: e.message });
