@@ -42,7 +42,7 @@ router.post('/facility/request', auth, async (req, res) => {
         workflowStep: profile.workflowStep,
       });
     }
-    if (!profile.walletAddress) {
+    if (!profile.primaryWallet) {
       return res.status(400).json({ message: 'Bind a wallet before requesting a facility.' });
     }
 
@@ -88,7 +88,7 @@ router.post('/facility/request', auth, async (req, res) => {
 
     const facility = await Facility.create({
       pspProfileId: profile._id,
-      pspWallet:    profile.walletAddress,
+      pspWallet:    profile.primaryWallet,
       facilityId,
       label: req.body?.label || '',
       requestedTerms,
@@ -144,7 +144,7 @@ router.get('/facility/queue', auth, authorizeRoles('KAM','CAD','CRO','SUPER_ADMI
 
     const items = await Facility.find({ status })
       .sort({ requestedAt: 1 })
-      .populate('pspProfileId', 'companyName walletAddress workflowStep');
+      .populate('pspProfileId', 'companyName primaryWallet workflowStep');
     res.json({ status, items: items.map(serialize) });
   } catch (e) {
     console.error('[facility/queue]', e);
@@ -154,7 +154,7 @@ router.get('/facility/queue', auth, authorizeRoles('KAM','CAD','CRO','SUPER_ADMI
 
 router.get('/facility/:id', auth, async (req, res) => {
   try {
-    const f = await Facility.findById(req.params.id).populate('pspProfileId', 'companyName walletAddress workflowStep');
+    const f = await Facility.findById(req.params.id).populate('pspProfileId', 'companyName primaryWallet workflowStep');
     if (!f) return res.status(404).json({ message: 'Facility not found' });
     // PSPs can read only their own.
     if (req.user.role === 'PSP') {
@@ -338,7 +338,7 @@ function serialize(f) {
       ? o.pspProfileId._id.toString()
       : (o.pspProfileId ? o.pspProfileId.toString() : null),
     psp: typeof o.pspProfileId === 'object' && o.pspProfileId?.companyName
-      ? { companyName: o.pspProfileId.companyName, walletAddress: o.pspProfileId.walletAddress }
+      ? { companyName: o.pspProfileId.companyName, primaryWallet: o.pspProfileId.primaryWallet }
       : null,
     pspWallet:        o.pspWallet,
     facilityId:       o.facilityId,

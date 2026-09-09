@@ -211,12 +211,15 @@ const pspProfileSchema = new mongoose.Schema({
   },
 
   // Blockchain Integration
-  // `walletAddress` is the canonical primary wallet bound during onboarding
-  // and baked into the on-chain Pool PDA seed at initialize_pool. Once a
-  // pool exists this field is effectively immutable — rebinding orphans
-  // the pool. The legacy `walletAddress` array is preserved for code paths
-  // that haven't migrated and for additional whitelisted recipient wallets.
-  walletAddress: { type: String, default: "" },
+  // `primaryWallet` is the canonical wallet bound during onboarding and
+  // stamped into the facility on chain. Once a pool exists it is effectively
+  // immutable — rebinding orphans the pool.
+  //
+  // It is deliberately a different field from the `walletAddress` array
+  // below, which holds additional whitelisted recipient wallets. They were
+  // briefly merged under one name, which silently made the canonical wallet
+  // an array and broke binding; keep them distinct.
+  primaryWallet: { type: String, default: "" },
   walletAddress: {
     type: [
       {

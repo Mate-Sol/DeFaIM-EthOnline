@@ -13,7 +13,7 @@
  *   POST /auth/wallet/bind            (JWT-protected)
  *     body: { wallet, nonce, signature }
  *     binds the verified wallet to the authenticated User
- *     (PSP → PSPProfile.walletAddress, admin → User.walletAddress).
+ *     (PSP → PSPProfile.primaryWallet, admin → User.walletAddress).
  */
 
 const express = require('express');
@@ -162,8 +162,8 @@ router.post('/bind', authMiddleware, async (req, res) => {
     }
     const verifiedWallet = await verifySignature({ wallet, nonce, signature, message, purpose: 'bind' });
 
-    // PSPs bind on PSPProfile (matches existing schema's walletAddress array
-    // for backward compat, plus new walletAddress field for the canonical
+    // PSPs bind on PSPProfile (the legacy walletAddress array for backward
+    // compat, plus primaryWallet for the canonical
     // primary wallet baked into the on-chain pool).
     if (req.user.role === 'PSP') {
       const profile = await PSPProfile.findOne({ userId: req.user.userId });
@@ -172,18 +172,18 @@ router.post('/bind', authMiddleware, async (req, res) => {
       // Once a pool has been initialized for this PSP, the on-chain pool
       // PDA seed is bound to the wallet at init time. Rebinding to a
       // different wallet would orphan that pool. Block.
-      if (profile.walletAddress && profile.walletAddress !== verifiedWallet) {
+      if (profile.primaryWallet && profile.primaryWallet !== verifiedWallet) {
         if (profile.assignedPoolAddress) {
           return res.status(409).json({
             message: 'Wallet already bound and a pool is initialized; cannot rebind',
-            currentWallet: profile.walletAddress,
+            currentWallet: profile.primaryWallet,
           });
         }
       }
 
-      profile.walletAddress = verifiedWallet;
-      // Maintain legacy `walletAddress` array for code paths that still
-      // read it. New code should prefer `walletAddress`.
+      profile.primaryWallet = verifiedWallet;
+      // Maintain the legacy `walletAddress` array for code paths that still
+      // read it. New code should prefer `primaryWallet`.
       profile.walletAddress = profile.walletAddress || [];
       const exists = profile.walletAddress.find((w) => w.address === verifiedWallet);
       if (!exists) {

@@ -104,7 +104,7 @@ async function setPSPProfileToFinalized(userId, wallet) {
   const { insertedId } = await db.collection('pspprofiles').insertOne({
     userId: uid,
     workflowStep: 'FINALIZED',
-    walletAddress: wallet,
+    primaryWallet: wallet,
     walletAddress: [{ address: wallet, name: 'Primary Wallet' }],
     companyName: `PSP Co ${RUN_ID}`,
     nextFacilityId: 1,

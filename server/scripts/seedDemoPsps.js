@@ -7,11 +7,16 @@
  * permanently empty and makes the lifecycle impossible to demonstrate. This
  * fills that gap.
  *
- *   psp1@demo.invoicemate.net   Meridian FX        -> KAM_REVIEW
- *   psp2@demo.invoicemate.net   Aurum Cross-Border -> CAD_REVIEW
- *   psp3@demo.invoicemate.net   Mercury Settle     -> CRO_REVIEW
- *   psp4@demo.invoicemate.net   Atlas Trade        -> LEGAL_REVIEW
- *   psp5@demo.invoicemate.net   Helix Payments     -> AWAITING_POOL_INIT
+ * Four are FINALIZED with a bound wallet, which is what POST /facility/request
+ * requires — onboarding is a one-time company process, and a borrower only
+ * reaches the facility chain after it completes. One is left mid-onboarding so
+ * that chain is still visible.
+ *
+ *   psp1@demo.invoicemate.net   Meridian FX        FINALIZED  (wallet: Awais)
+ *   psp2@demo.invoicemate.net   Aurum Cross-Border FINALIZED
+ *   psp3@demo.invoicemate.net   Mercury Settle     FINALIZED
+ *   psp4@demo.invoicemate.net   Atlas Trade        FINALIZED
+ *   psp5@demo.invoicemate.net   Helix Payments     KAM_REVIEW (still onboarding)
  *
  * Password for all: demo123
  *
@@ -44,8 +49,9 @@ const PSPS = [
     requestedAmount: '250000',
     requestedDuration: '30',
     annualRevenue: 6800000,
-    workflowStep: 'KAM_REVIEW',
-    creditLineStatus: 'Pending',
+    workflowStep: 'FINALIZED',
+    creditLineStatus: 'Approved',
+    wallet: '0xAd8783aF69bD72eEf8f7e4ec3dc514cD5116c656',
   },
   {
     email: 'psp2@demo.invoicemate.net',
@@ -59,8 +65,9 @@ const PSPS = [
     requestedAmount: '180000',
     requestedDuration: '30',
     annualRevenue: 4100000,
-    workflowStep: 'CAD_REVIEW',
-    creditLineStatus: 'Pending',
+    workflowStep: 'FINALIZED',
+    creditLineStatus: 'Approved',
+    wallet: '0x0b9dDfcdB31aEf5Cde26d0E6DbAc6917B6849f05',
   },
   {
     email: 'psp3@demo.invoicemate.net',
@@ -74,8 +81,9 @@ const PSPS = [
     requestedAmount: '400000',
     requestedDuration: '45',
     annualRevenue: 9200000,
-    workflowStep: 'CRO_REVIEW',
-    creditLineStatus: 'Pending',
+    workflowStep: 'FINALIZED',
+    creditLineStatus: 'Approved',
+    wallet: '0x0b9dDfcdB31aEf5Cde26d0E6DbAc6917B6849f05',
   },
   {
     email: 'psp4@demo.invoicemate.net',
@@ -89,8 +97,9 @@ const PSPS = [
     requestedAmount: '320000',
     requestedDuration: '60',
     annualRevenue: 7400000,
-    workflowStep: 'LEGAL_REVIEW',
-    creditLineStatus: 'Pending',
+    workflowStep: 'FINALIZED',
+    creditLineStatus: 'Approved',
+    wallet: '0x0b9dDfcdB31aEf5Cde26d0E6DbAc6917B6849f05',
   },
   {
     email: 'psp5@demo.invoicemate.net',
@@ -104,8 +113,8 @@ const PSPS = [
     requestedAmount: '500000',
     requestedDuration: '30',
     // Through every review; the on-chain admin signs pool creation next.
-    workflowStep: 'AWAITING_POOL_INIT',
-    creditLineStatus: 'Approved',
+    workflowStep: 'KAM_REVIEW',
+    creditLineStatus: 'Pending',
     annualRevenue: 11500000,
     approved: true,
   },
@@ -147,6 +156,11 @@ function profileFor(spec, userId) {
     preQualFundingCounterparties: 'Tier-1 banking partners',
     workflowStep: spec.workflowStep,
     creditLineStatus: spec.creditLineStatus,
+    // POST /facility/request rejects a profile without a bound wallet.
+    primaryWallet: spec.wallet || '',
+    // The review screens read the numeric fields, not the preQual strings.
+    requestedAmount: Number(spec.requestedAmount),
+    requestedDuration: Number(spec.requestedDuration),
   };
 
   if (spec.approved) {

@@ -923,7 +923,7 @@ router.post('/applications/:id/approve', authorizeRoles('CRO', 'CAD'), async (re
 
       // PSP must have bound a wallet — that's what gets baked into the
       // pool PDA seed. Without it we can't even pre-derive addresses.
-      if (!profile.walletAddress) {
+      if (!profile.primaryWallet) {
         return res.status(409).json({
           message: 'PSP has not bound a wallet yet — cannot create the pool',
         });
