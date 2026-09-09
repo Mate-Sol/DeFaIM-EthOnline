@@ -179,13 +179,26 @@ async function readPoolState(poolAddress) {
  * current principal is read back per ref, which is also how a repaid drawdown
  * is detected (the pool zeroes the principal on repayment).
  */
-async function readDrawdownsFromChain(poolAddress, { includeRepaid = false, lookback = 50000 } = {}) {
+async function readDrawdownsFromChain(poolAddress, { includeRepaid = false, lookback = 20000 } = {}) {
   const pool = getPool(poolAddress);
   const provider = getProvider();
   const latest = await provider.getBlockNumber();
-  const fromBlock = Math.max(0, latest - lookback);
+  const earliest = Math.max(0, latest - lookback);
 
-  const events = await pool.queryFilter(pool.filters.DrawdownExecuted(), fromBlock, latest);
+  // Arc's RPC rejects wide log queries with "requested range too large", so
+  // walk backwards in windows rather than asking for the whole span at once.
+  const STEP = parseInt(process.env.EVM_LOG_WINDOW || '4000', 10);
+  const events = [];
+  for (let to = latest; to > earliest; to -= STEP) {
+    const from = Math.max(earliest, to - STEP + 1);
+    try {
+      const batch = await pool.queryFilter(pool.filters.DrawdownExecuted(), from, to);
+      events.push(...batch);
+    } catch (e) {
+      // A window that fails should not lose the windows that succeeded.
+      console.warn('[readDrawdownsFromChain] window', from, to, e.message);
+    }
+  }
   const out = [];
   for (const ev of events) {
     const ref = ev.args?.ref;
