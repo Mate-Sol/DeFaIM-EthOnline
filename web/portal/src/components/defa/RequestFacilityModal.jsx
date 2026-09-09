@@ -15,7 +15,11 @@ import { api } from '../../services/evm';
 const RequestFacilityModal = ({ onClose, onSuccess, isFirstFacility }) => {
   const [form, setForm] = useState({
     label: '',
-    creditLine: '500000',
+    // Deliberately blank rather than pre-filled. A default credit line gets
+    // submitted unchanged, and on testnet the borrower's own lenders have to
+    // fund it — a six-figure facility can never reach its soft cap and stalls
+    // in Funding forever. Make the borrower state the number.
+    creditLine: '',
     tenorDays: '30',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -85,6 +89,7 @@ const RequestFacilityModal = ({ onClose, onSuccess, isFirstFacility }) => {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Credit line (USD)">
               <input type="number" min="0" step="any" value={form.creditLine}
+                     placeholder="e.g. 250000"
                      onChange={(e) => set('creditLine', e.target.value)} className="defa-input" disabled={submitting} />
             </Field>
             <Field label="Tenor (days)">

@@ -113,7 +113,12 @@ router.get('/facility/my', auth, async (req, res) => {
   try {
     const profile = await PSPProfile.findOne({ userId: req.user.userId });
     if (!profile) return res.status(404).json({ message: 'PSP profile not found' });
-    const items = await Facility.find({ pspProfileId: profile._id }).sort({ facilityId: 1 });
+    // Populate like the admin queue does — serialize() derives `psp` from the
+    // populated profile, so without this the borrower's own screens render the
+    // company name as "null".
+    const items = await Facility.find({ pspProfileId: profile._id })
+      .sort({ facilityId: 1 })
+      .populate('pspProfileId', 'companyName primaryWallet workflowStep');
     res.json({ items: items.map(serialize) });
   } catch (e) {
     console.error('[facility/my]', e);
