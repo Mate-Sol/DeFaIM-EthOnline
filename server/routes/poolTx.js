@@ -393,10 +393,20 @@ router.get('/pool/:pool/drawdowns', async (req, res) => {
     const filter = { pool };
     if (!includeRepaid) filter.repaid = { $ne: true };
     const rows = await DrawdownState.find(filter).lean();
-    res.json(rows.map((d) => ({
-      pubkey: d.pubkey, id: d.id, principal: d.principal,
-      drawdownDay: d.drawdownDay, tenorDays: d.tenorDays, repaid: !!d.repaid,
-    })));
+    if (rows.length > 0) {
+      return res.json(rows.map((d) => ({
+        pubkey: d.pubkey, id: d.id, principal: d.principal,
+        drawdownDay: d.drawdownDay, tenorDays: d.tenorDays, repaid: !!d.repaid,
+      })));
+    }
+
+    // Nothing indexed. That is not the same as nothing existing: the indexer
+    // only scans DrawdownExecuted for pools it has already recorded in
+    // PoolState, so a pool it missed has its drawdowns missed too — and the
+    // borrower is then shown "No drawdowns yet" for money they have actually
+    // taken, with no way to repay it. Read the events straight from the chain.
+    const live = await svc.readDrawdownsFromChain(pool, { includeRepaid });
+    res.json(live);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 

@@ -170,6 +170,41 @@ async function readPoolState(poolAddress) {
   };
 }
 
+/**
+ * Read a pool's drawdowns directly from its DrawdownExecuted events.
+ *
+ * The indexer is the normal source, but it only scans drawdowns for pools it
+ * has already recorded, so a pool it has not yet seen appears to have none.
+ * This is the fallback for that case: the events are authoritative and the
+ * current principal is read back per ref, which is also how a repaid drawdown
+ * is detected (the pool zeroes the principal on repayment).
+ */
+async function readDrawdownsFromChain(poolAddress, { includeRepaid = false, lookback = 50000 } = {}) {
+  const pool = getPool(poolAddress);
+  const provider = getProvider();
+  const latest = await provider.getBlockNumber();
+  const fromBlock = Math.max(0, latest - lookback);
+
+  const events = await pool.queryFilter(pool.filters.DrawdownExecuted(), fromBlock, latest);
+  const out = [];
+  for (const ev of events) {
+    const ref = ev.args?.ref;
+    if (!ref) continue;
+    const dd = await readDrawdown(poolAddress, ref);
+    const repaid = !dd.exists;
+    if (repaid && !includeRepaid) continue;
+    out.push({
+      pubkey: ref,
+      id: ref,
+      principal: (repaid ? ev.args.principal : dd.principal).toString(),
+      drawdownDay: Number((dd.startTs || 0n) / 86400n),
+      tenorDays: Number(((dd.expiryTs || 0n) - (dd.startTs || 0n)) / 86400n),
+      repaid,
+    });
+  }
+  return out;
+}
+
 async function readDrawdown(poolAddress, ref) {
   const pool = getPool(poolAddress);
   const [principal, startTs, expiryTs, receiverWallet] = await pool.getDrawDown(ref);
@@ -416,6 +451,7 @@ module.exports = {
   // Reads
   readPoolState,
   readDrawdown,
+  readDrawdownsFromChain,
   readAllPools,
   readPspRecord,
   readLpPosition,
