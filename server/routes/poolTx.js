@@ -54,11 +54,6 @@ function validAddr(x) {
   try { return ethers.getAddress(x); } catch { return null; }
 }
 
-/**
- * Coerce a user-provided amount string into a BigInt of USDC base units.
- * USDC has 6 decimals. FE already scales; we also tolerate decimal-string
- * inputs (e.g. "12.34") for CLI/curl convenience.
- */
 // How long a new pool accepts deposits before it can be locked.
 //
 // This is wall-clock seconds, so it must track the clock of the factory in
@@ -84,6 +79,15 @@ function usdcToBase(amount) {
   return BigInt(Math.round(n * 10 ** USDC_DECIMALS));
 }
 
+/**
+ * Coerce a caller-provided amount into a BigInt of USDC base units.
+ *
+ * Convention: a bare integer is ALREADY in base units ("20" is 0.000020 USDC);
+ * a decimal string is human USDC and gets scaled ("20.0" is 20 USDC). Callers
+ * are expected to scale before sending — see usdcToBase() for the other
+ * direction. The ambiguity is load-bearing for the raw-params path, so do not
+ * "fix" it here without auditing every call site.
+ */
 function toBase(amount) {
   if (amount === null || amount === undefined) return null;
   if (typeof amount === 'bigint') return amount;

@@ -79,7 +79,11 @@ const DepositForm = ({ walletBalance, currency = "USDC", apy = "12.00", deal }) 
       // POST /pool/lender/build-tx/deposit — returns { steps: [approve, deposit], to, data, value }
       const res = await axiosInstance.post("/pool/lender/build-tx/deposit", {
         pool: poolAddress,
-        amount: usdcAmount, // BE tolerates decimal strings
+        // Base units, not the raw input. The API reads a bare integer as
+        // already being in base units and only scales a decimal string, so
+        // typing "20" and typing "20.0" would otherwise mean amounts a
+        // million times apart. Scale here so the input can't be ambiguous.
+        amount: BigInt(Math.round(parsedAmount * 1e6)).toString(),
       });
       const steps = Array.isArray(res?.steps) && res.steps.length
         ? res.steps
