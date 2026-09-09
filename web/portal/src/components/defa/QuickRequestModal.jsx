@@ -10,25 +10,32 @@ const fmtUsd = (n) =>
  * Borrower "Request Financing" flow.
  *
  * Two steps:
- *   1. Pick an external order from the seeded orderbook ($100k / $250k /
- *      $350k / $500k / $750k / $1M). Customer name + invoice details
- *      give the demo a real-feel "I'm financing THIS receivable" story.
- *   2. Confirm tenor + projected cost, then submit. Server creates the
- *      FinancingRequest in AwaitingDrawdown so the next-actions hero
- *      surfaces a Sign Drawdown CTA immediately.
+ *   1. Pick an external order from the seeded orderbook. Customer name and
+ *      invoice details give the demo a real-feel "I'm financing THIS
+ *      receivable" story. The orderbook is optional — if it is unavailable
+ *      the borrower can still draw against available liquidity.
+ *   2. Set the amount and tenor, then submit. The server signs the drawdown
+ *      as AGENT2 and USDC moves straight to the borrower's authorised
+ *      receiver wallet, so there is no wallet popup on the borrower's side.
+ *
+ * The order amounts are six and seven figures, while a testnet pool holds
+ * whatever a lender actually deposited, so the amount is editable and capped
+ * at the pool's availableToDd — otherwise every drawdown reverts for exceeding
+ * liquidity.
  */
 const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
   const [step, setStep] = useState('pick'); // 'pick' | 'confirm'
   const [orders, setOrders] = useState(null);
   const [picked, setPicked] = useState(null);
   const [tenor, setTenor] = useState('5');
+  const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [poolState, setPoolState] = useState(null);
 
   // Load orderbook + pool rates in parallel.
   useEffect(() => {
     let cancelled = false;
-    api().get('/pool/psp/borrow/external-orders')
+    api().get('/psp/order-book')
       .then(({ data }) => { if (!cancelled) setOrders(data || []); })
       .catch(() => { if (!cancelled) setOrders([]); });
     if (pool) {
@@ -39,7 +46,10 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
     return () => { cancelled = true; };
   }, [pool]);
 
-  const amtNum = Number(picked?.amount) || 0;
+  // availableToDd is base units (USDC has 6 decimals).
+  const availableUsdc = Number(poolState?.availableToDd || 0) / 1e6;
+  const amtNum = Number(amount) || 0;
+  const overLiquidity = amtNum > availableUsdc;
   const tenorNum = parseInt(tenor, 10) || 0;
   const utilBps = Number(poolState?.utilizationRateBps || 0);
   const projDailyFee = amtNum > 0 && utilBps > 0 ? (amtNum * utilBps) / 10000 : 0;
@@ -48,16 +58,18 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
 
   const handleSubmit = async () => {
     if (!picked) { toast.error('Pick an order first'); return; }
+    if (!(amtNum > 0)) { toast.error('Enter an amount to draw'); return; }
+    if (overLiquidity) { toast.error(`Only ${fmtUsd(availableUsdc)} is available to draw`); return; }
     if (!Number.isInteger(tenorNum) || tenorNum <= 0) { toast.error('Tenor must be a positive integer'); return; }
     setSubmitting(true);
     try {
-      const { data } = await api().post('/pool/psp/borrow/quick-request-financing', {
-        amount: picked.amount,
+      const { data } = await api().post('/pool/psp/exec/drawdown', {
+        // Base units — the API reads a bare integer as already scaled.
+        amount: BigInt(Math.round(amtNum * 1e6)).toString(),
         tenorDays: tenorNum,
-        orderReference: picked.orderReference,
-        pool: pool || undefined,
+        drawdownId: picked.orderReference,
       });
-      toast.success(`Request created — order ${picked.orderReference}`);
+      toast.success(`Drawdown executed — tx ${String(data.txHash).slice(0, 10)}…`);
       onSuccess?.(data);
     } catch (e) {
       toast.error(e.response?.data?.message || e.message);
@@ -151,7 +163,13 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
                 Cancel
               </button>
               <button
-                onClick={() => setStep('confirm')}
+                onClick={() => {
+                  // Seed with whatever the pool can actually lend, not the
+                  // order's headline figure.
+                  const suggested = Math.min(Number(picked?.amount) || 0, availableUsdc);
+                  setAmount(String(suggested > 0 ? suggested : availableUsdc));
+                  setStep('confirm');
+                }}
                 disabled={!picked}
                 className="defa-btn-primary flex-1 justify-center"
               >
@@ -173,6 +191,31 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
               </div>
               <div className="text-2xl font-bold tabular-nums mt-2">{fmtUsd(picked.amount)}</div>
             </div>
+
+            <Field label="Amount to draw (USDC)">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="defa-input"
+                disabled={submitting}
+              />
+              <div className="flex items-center justify-between mt-1 text-[11px]">
+                <span className={overLiquidity ? 'text-red-200' : 'text-white/60'}>
+                  {fmtUsd(availableUsdc)} available in the pool
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAmount(String(availableUsdc))}
+                  className="text-white/80 underline"
+                  disabled={submitting || !(availableUsdc > 0)}
+                >
+                  Max
+                </button>
+              </div>
+            </Field>
 
             <Field label="Tenor (days)">
               <input
@@ -211,11 +254,11 @@ const QuickRequestModal = ({ onClose, onSuccess, pool, facilityLabel }) => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || overLiquidity || !(amtNum > 0)}
                 className="defa-btn-primary flex-1 justify-center"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                Create Request
+                Execute Drawdown
               </button>
             </div>
           </>
