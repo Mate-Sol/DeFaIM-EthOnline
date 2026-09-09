@@ -46,7 +46,10 @@ const PoolNameOverride = require('../models/PoolNameOverride');
  * `poolPda` from the Colosseum era. Values are now 0x… EVM addresses.
  * Aliasing here keeps the mismatch out of route bodies.
  */
-const walletOf   = (doc) => doc?.walletAddress || doc?.evmWallet || '';
+// The canonical wallet bound at onboarding. `walletAddress` is the array of
+// additional whitelisted recipient wallets and must not be used here — it
+// would hand an array to anything expecting an address.
+const walletOf   = (doc) => doc?.primaryWallet || doc?.evmWallet || '';
 const poolAddrOf = (doc) => doc?.poolPda || doc?.poolAddress || '';
 
 /** Cheap EIP-55 validator; returns checksummed address or null. */
@@ -472,6 +475,39 @@ router.get('/pools', async (req, res) => {
  * side. Replaces Colosseum's fee-payer relay pattern with a cleaner
  * role-gated exec.
  */
+/**
+ * Pools belonging to the authenticated borrower, matched on the wallet bound
+ * during onboarding.
+ *
+ * Ported from defa-solana-devnet, where this exists as /psp/facilities. It was
+ * not carried into the Arc port, so the borrower's "My Facilities" screen — the
+ * only route to the drawdown flow — called a 404, swallowed it via its
+ * `.catch(() => ({ data: [] }))`, and reported "No facilities yet" for a
+ * borrower with a live, funded facility.
+ *
+ * Served from indexed state rather than per-request chain reads, same as
+ * /pools.
+ */
+router.get('/psp/facilities', authMiddleware, authorizeRoles('PSP'), async (req, res) => {
+  try {
+    const profile = await PSPProfile.findOne({ userId: req.user.userId });
+    if (!profile) return res.status(404).json({ message: 'PSP profile not found' });
+    const wallet = walletOf(profile);
+    if (!wallet) return res.status(409).json({ message: 'PSP wallet not bound' });
+
+    // Addresses are stored as whatever casing the source produced, so match
+    // case-insensitively rather than relying on consistent checksumming.
+    const docs = await PoolState.find({
+      pspWallet: new RegExp(`^${wallet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+    }).lean();
+
+    res.json(docs.map(shapePoolFromDoc));
+  } catch (e) {
+    console.error('[psp/facilities]', e);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 router.post('/psp/exec/drawdown', authMiddleware, authorizeRoles('PSP'), async (req, res) => {
   try {
     const { amount, tenorDays, receiverWallet, drawdownId } = req.body || {};
