@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import WalletBindButton from '../../components/defa/WalletBindButton';
 import { useAuth } from '../../context/AuthContext';
 import { CreditCard, TrendingUp, Wallet as WalletIcon, FileText, LogOut, UserPlus, Copy, Check, ExternalLink, ArrowDownLeft, ArrowUpRight, Loader2 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
@@ -62,7 +63,10 @@ const Wallet = () => {
           </header>
 
           <div className="mb-8">
-            null
+            <WalletBindButton
+              boundWallet={profile?.primaryWallet}
+              onBound={(addr) => setProfile({ ...profile, primaryWallet: addr })}
+            />
           </div>
 
           {loading ? (

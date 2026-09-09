@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import SettleCommitButton from '../../../components/defa/SettleCommitButton';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAccount, useSendTransaction } from 'wagmi';
 import {
@@ -193,8 +194,12 @@ const FacilityDetail = () => {
           </div>
         </div>
 
-        {/* Next Actions hero — pulls across all PSP facilities, but useful here too */}
-        null
+        {/* Commitment fee accrues on undrawn capital and has to be settled
+            before the pool can close and release the borrower's slot. */}
+        <div className="defa-card p-4 mb-6">
+          <div className="defa-label mb-2">Settle commitment fee</div>
+          <SettleCommitButton pool={poolPubkey} />
+        </div>
 
         {/* Daily activity entry */}
         <button

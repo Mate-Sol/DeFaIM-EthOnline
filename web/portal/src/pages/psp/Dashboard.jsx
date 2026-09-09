@@ -276,7 +276,6 @@ const PSPDashboard = () => {
                     accrues commit fee lazily on every event; if the PSP
                     repays late in the day or wants to close out, this
                     pays whatever's accrued so lenders can redeem. */}
-                null
                 <button
                   onClick={() => navigate('/psp/onboarding')}
                   className="btn-secondary flex items-center gap-2"

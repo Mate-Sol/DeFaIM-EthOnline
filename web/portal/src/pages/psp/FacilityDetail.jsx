@@ -245,7 +245,6 @@ const FacilityDetail = () => {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          null
                         </td>
                       </tr>
                     ))}

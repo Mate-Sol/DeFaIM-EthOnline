@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import WalletBindButton from '../../components/defa/WalletBindButton';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { pspAPI } from "../../services/api";
@@ -246,7 +247,10 @@ const Register = () => {
                 Required. The wallet you bind here will be permanently linked to
                 your eventual on-chain credit pool — choose carefully.
               </p>
-              null
+              <WalletBindButton
+                boundWallet={formData.primaryWallet}
+                onBound={(addr) => updateFormData({ primaryWallet: addr })}
+              />
             </div>
             <PreQualification data={formData} onChange={updateFormData} />
           </div>

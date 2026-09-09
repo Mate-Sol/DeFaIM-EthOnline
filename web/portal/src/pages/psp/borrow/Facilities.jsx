@@ -76,7 +76,6 @@ const PspBorrowFacilities = () => {
           </div>
         </div>
 
-        null
 
         {loading && onChain.length === 0 && offChain.length === 0 ? (
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-white/70" /></div>
