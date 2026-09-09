@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import Button from "../components/ui/Button";
 import { Zap } from "lucide-react";
 import { toast } from "react-toastify";
-import { useAccount, useSendTransaction } from "wagmi";
+import { useAccount, useSendTransaction, useReadContract } from "wagmi";
+import { formatUnits } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { axiosInstance } from "@/libs/axios";
 
@@ -21,14 +22,43 @@ import { axiosInstance } from "@/libs/axios";
  * deal._id (pool address) and deal.overview.loanAmount / deal.poolAmountRaised
  * for the min/remaining checks.
  */
-const DepositForm = ({ walletBalance, currency = "USDC", apy = "12.00", deal }) => {
+// Arc settles in native USDC exposed as a 6-decimal ERC-20 facade. Env-driven
+// like the rest of the chain config so the same build targets Anvil or Arc.
+const USDC_ADDRESS =
+  import.meta.env.VITE_USDC_ADDRESS || "0x3600000000000000000000000000000000000000";
+const USDC_DECIMALS = 6;
+const ERC20_BALANCE_ABI = [
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+];
+
+const DepositForm = ({ currency = "USDC", apy = "12.00", deal }) => {
   const { address, isConnected } = useAccount();
   const { sendTransactionAsync } = useSendTransaction();
 
   const [usdcAmount, setUsdcAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const maxBalance = parseFloat(String(walletBalance || "0").replace(/,/g, "")) || 0;
+  // The balance used to be a hardcoded "99,000.00", which made Max fill an
+  // amount the wallet could not pay and the deposit revert. Read it for real.
+  const { data: rawBalance } = useReadContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_BALANCE_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: Boolean(address), refetchInterval: 15000 },
+  });
+  const maxBalance =
+    rawBalance === undefined ? 0 : Number(formatUnits(rawBalance, USDC_DECIMALS));
+  const walletBalance = maxBalance.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   const apyRate = parseFloat(apy) / 100;
   const parsedAmount = parseFloat(usdcAmount) || 0;
   const projectedEarnings = (parsedAmount * apyRate).toFixed(2);
@@ -126,13 +156,13 @@ const DepositForm = ({ walletBalance, currency = "USDC", apy = "12.00", deal }) 
 
         {/* Input row */}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-white text-sm shrink-0">$99.99k</span>
+          <span className="text-white text-sm shrink-0">${parsedAmount.toFixed(2)}</span>
           <div className="flex items-center gap-2 ml-auto">
             <input
               type="text"
               value={usdcAmount}
               onChange={handleChange}
-              placeholder={`0.27 ${currency}`}
+              placeholder={`0.00 ${currency}`}
               className="bg-transparent text-white/70 text-sm text-right outline-none w-24 placeholder-white/40"
             />
             <button
@@ -154,7 +184,7 @@ const DepositForm = ({ walletBalance, currency = "USDC", apy = "12.00", deal }) 
               Deposit {currency}
             </span>
             <span className="text-white/70 text-sm text-right">
-              {usdcAmount || "0.00"} <span className="mx-1">→</span> 99.99k
+              {usdcAmount || "0.00"} {currency}
             </span>
           </div>
           <div className="flex items-center justify-between">
@@ -171,7 +201,7 @@ const DepositForm = ({ walletBalance, currency = "USDC", apy = "12.00", deal }) 
             <span className="text-white/70 text-sm text-right">
               {parsedAmount > 0
                 ? `+${projectedEarnings} ${currency}`
-                : `0.00 → 99.99k`}
+                : `0.00 ${currency}`}
             </span>
           </div>
         </div>

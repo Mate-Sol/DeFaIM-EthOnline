@@ -211,7 +211,7 @@ const PoolDetails = () => {
 
         {/* Right Column — Deposit Form */}
         <div className="w-full  xl:w-80 shrink-0">
-          <DepositForm walletBalance="99,000.00" currency="USDC" deal={deal} />
+          <DepositForm currency="USDC" deal={deal} />
         </div>
       </div>
     </div>
