@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { MOCK_POOLS } from "../Mock/mock_data";
 import PoolInfoCard from "../components/ui/PoolInfoCard";
 import DepositForm from "../dashboard/DepositForm";
+import RedeemPanel from "@/dashboard/RedeemPanel";
 import BusinessOverview from "../dashboard/BusinessOverview";
 import PerformanceGraph from "../dashboard/PerformanceGraph";
 import RecentTransection from "../dashboard/RecentTransection";
@@ -212,6 +213,9 @@ const PoolDetails = () => {
         {/* Right Column — Deposit Form */}
         <div className="w-full  xl:w-80 shrink-0">
           <DepositForm currency="USDC" deal={deal} />
+          <div className="mt-4">
+            <RedeemPanel currency="USDC" deal={deal} />
+          </div>
         </div>
       </div>
     </div>
