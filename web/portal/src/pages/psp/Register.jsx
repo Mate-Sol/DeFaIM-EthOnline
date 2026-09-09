@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import WalletBindButton from '../../components/defa/WalletBindButton';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { pspAPI } from "../../services/api";
@@ -241,16 +240,18 @@ const Register = () => {
       case 1:
         return (
           <div className="space-y-6">
-            <div>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-2">Wallet</h3>
-              <p className="text-xs text-gray-600 mb-3">
-                Required. The wallet you bind here will be permanently linked to
-                your eventual on-chain credit pool — choose carefully.
+              <p className="text-xs text-gray-700">
+                You bind your wallet after signing in, from the <strong>Wallet</strong>
+                page. It cannot be done here because binding is signed against your
+                account, and the account does not exist until this form is submitted.
               </p>
-              <WalletBindButton
-                boundWallet={formData.primaryWallet}
-                onBound={(addr) => updateFormData({ primaryWallet: addr })}
-              />
+              <p className="text-xs text-gray-700 mt-2">
+                It is required before you can request a facility, and it is permanent —
+                the wallet you bind is stamped into your on-chain credit pool as the
+                borrower, and is the only wallet the pool will accept repayment from.
+              </p>
             </div>
             <PreQualification data={formData} onChange={updateFormData} />
           </div>
