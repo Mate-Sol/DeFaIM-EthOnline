@@ -584,12 +584,48 @@ router.post('/psp/build-tx/repay', authMiddleware, authorizeRoles('PSP'), async 
   try {
     const profile = await loadPspProfile(req, res); if (!profile) return;
     const facility = await loadOwnedFacility(req, res, profile); if (!facility) return;
-    const ref = req.body?.ref;
-    if (!ref || !/^0x[0-9a-fA-F]{64}$/.test(ref)) {
-      return res.status(400).json({ message: 'ref (bytes32 hex) required' });
+    // The UI knows the drawdown by its id, not by the on-chain ref, and the
+    // exec endpoint already derives one from the other. Accept either.
+    let ref = req.body?.ref;
+    if (!ref && (req.body?.drawdownId !== undefined && req.body?.drawdownId !== null)) {
+      ref = svc.refFromId(String(req.body.drawdownId));
     }
-    const tx = svc.encodeRepay(poolAddrOf(facility), ref);
-    res.json({ to: tx.to, data: tx.data, value: tx.value.toString() });
+    if (!ref || !/^0x[0-9a-fA-F]{64}$/.test(ref)) {
+      return res.status(400).json({ message: 'ref (bytes32) or drawdownId required' });
+    }
+    const pool = poolAddrOf(facility);
+
+    // repay() pulls principal plus the accrued charge from the borrower, so it
+    // needs an allowance first — exactly like deposit, which already returns
+    // [approve, deposit]. Without this the button reverts with
+    // "ERC20: transfer amount exceeds allowance" and nothing explains why.
+    //
+    // The charge accrues per second and is computed inside repay(), so there is
+    // no exact figure to approve ahead of time. Approve the drawdown principal
+    // plus a margin big enough to cover the fee for the whole facility; the
+    // pool only ever transfers what is actually owed.
+    let approveAmount;
+    try {
+      const dd = await svc.readDrawdown(pool, ref);
+      const principal = BigInt(dd?.principal ?? 0);
+      approveAmount = principal > 0n ? (principal * 12n) / 10n : null;
+    } catch { approveAmount = null; }
+    if (!approveAmount) {
+      // Fall back to the pool's outstanding balance with the same margin.
+      const state = await svc.readPoolState(pool);
+      approveAmount = (BigInt(state.outstanding) * 12n) / 10n;
+    }
+
+    const approve = svc.encodeApprove(pool, approveAmount);
+    const tx = svc.encodeRepay(pool, ref);
+    const jsonTx = (t) => ({ to: t.to, data: t.data, value: t.value.toString() });
+    res.json({
+      steps: [
+        { label: 'Approve USDC', tx: jsonTx(approve) },
+        { label: 'Repay drawdown', tx: jsonTx(tx) },
+      ],
+      to: tx.to, data: tx.data, value: tx.value.toString(),
+    });
   } catch (e) { res.status(400).json({ message: e.message }); }
 });
 

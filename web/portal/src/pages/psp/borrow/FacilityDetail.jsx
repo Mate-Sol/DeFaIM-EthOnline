@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import PspBorrowLayout from './Layout';
 import ValidationPipeline from '../../../components/defa/ValidationPipeline';
-import { api, buildAndSend } from '../../../services/evm';
+import { api, buildAndSend, buildAndSendSteps } from '../../../services/evm';
 import { fmtDayIndex } from '../../../utils/dateFmt';
 import { isSettledFromPool } from '../../../utils/poolStatus';
 
@@ -78,8 +78,11 @@ const FacilityDetail = () => {
     if (!isConnected) { toast.error('Connect wallet first'); return; }
     setBusy(key);
     try {
-      const r = await buildAndSend(address, sendTransactionAsync, endpoint, body);
-      toast.success(`Done: ${r.hash.slice(0, 10)}…`);
+      // Some of these endpoints return a single tx and some return steps —
+      // repay needs an approval first, the same as a deposit does. The
+      // multi-step sender handles both shapes.
+      const r = await buildAndSendSteps(address, sendTransactionAsync, endpoint, body);
+      toast.success(`Done: ${String(r.hash).slice(0, 10)}…`);
       refresh();
     } catch (e) {
       toast.error(e.response?.data?.message || e.message);

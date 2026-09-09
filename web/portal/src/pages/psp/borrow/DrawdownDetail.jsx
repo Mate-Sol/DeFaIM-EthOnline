@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PspBorrowLayout from './Layout';
-import { api, buildAndSend } from '../../../services/evm';
+import { api, buildAndSendSteps } from '../../../services/evm';
 import { fmtLocalDate, fmtDayIndex } from '../../../utils/dateFmt';
 
 const fmt = (base) => {
@@ -45,7 +45,7 @@ const DrawdownDetail = () => {
     if (!isConnected) { toast.error('Connect wallet first'); return; }
     setBusy(true);
     try {
-      const r = await buildAndSend(address, sendTransactionAsync, '/pool/psp/build-tx/repay', { drawdownId: Number(drawdownId), pool: poolPubkey });
+      const r = await buildAndSendSteps(address, sendTransactionAsync, '/pool/psp/build-tx/repay', { drawdownId: Number(drawdownId), pool: poolPubkey });
       toast.success(`Repaid: ${r.hash.slice(0, 10)}…`);
       navigate(`/psp/borrow/facilities/${poolPubkey}`);
     } catch (e) {
