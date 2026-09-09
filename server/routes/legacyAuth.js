@@ -118,7 +118,9 @@ router.get('/get-user/:id', async (req, res) => {
 
 router.post('/apply-referral', async (req, res) => {
   try {
-    const refercode = String(req.body?.refercode || '').trim();
+    // Generated codes are uppercase and matched exactly. /access-code/check
+    // already normalises case; do the same here so a lowercase paste works.
+    const refercode = String(req.body?.refercode || '').trim().toUpperCase();
     if (!refercode) return res.status(400).json({ message: 'refercode required' });
 
     const now = new Date();
@@ -144,7 +146,7 @@ router.post('/create-user', async (req, res) => {
     const userName = (req.body?.userName || '').trim();
     const email = (req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
-    const refercode = String(req.body?.refercode || '').trim();
+    const refercode = String(req.body?.refercode || '').trim().toUpperCase();
 
     if (!userName || !email || !password || !refercode) {
       return res.status(400).json({ message: 'userName, email, password, refercode all required' });

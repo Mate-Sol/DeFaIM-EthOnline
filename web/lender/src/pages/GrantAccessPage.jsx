@@ -8,28 +8,41 @@ import accessBg from "@/assets/multiChain-ui/access-bg.jpg";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Typography from "@/components/ui/Typography";
-import OtpBox from "@/components/ui/OtpBox";
 import LoadingOverlay from "@/components/loading/LoadingOverlay";
 import { axiosInstance } from "@/libs/axios";
 
-const OTP_LENGTH = 6;
+// Access codes are issued by POST /access-code/create as three dash-separated
+// groups of four alphanumerics, e.g. M4G9-8JEK-BYCD. This page previously used
+// a six-box numeric OTP widget, which no generated code could ever be typed
+// into — the only code that worked was a numeric one seeded straight into
+// Mongo, and codes are single-use, so once it was redeemed nobody could
+// register at all.
+const CODE_GROUPS = 3;
+const GROUP_LEN = 4;
+const CODE_LEN = CODE_GROUPS * GROUP_LEN;
+
+// Accept whatever the user pastes or types — strip anything that is not a code
+// character, uppercase it, then re-insert the dashes.
+function formatCode(raw) {
+  const clean = String(raw).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, CODE_LEN);
+  return clean.match(/.{1,4}/g)?.join("-") ?? "";
+}
 
 const GrantAccessPage = () => {
-  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleContinue = async () => {
     try {
-      const isIncomplete = otp.some((code) => code === "");
-      if (isIncomplete) {
-        const msg = "Please enter a complete 6-digit access code to continue.";
+      const otpCode = otp.trim();
+      if (otpCode.replace(/-/g, "").length !== CODE_LEN) {
+        const msg = "Enter the full access code, e.g. M4G9-8JEK-BYCD.";
         setError(msg);
         toast.error(msg);
         return;
       }
-      const otpCode = otp.join("");
       setError("");
       setLoading(true);
       const res = await axiosInstance.post("/users/apply-referral", {
@@ -41,7 +54,11 @@ const GrantAccessPage = () => {
       navigate(`/register/${otpCode}`);
     } catch (err) {
       console.error("Access code error:", err);
-      toast.error("Something went wrong. Please try again.");
+      // Surface the server's reason — "Invalid or expired code" is the common
+      // one and is actionable, unlike a generic failure message.
+      const msg = err?.response?.data?.message || "Something went wrong. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -90,16 +107,25 @@ const GrantAccessPage = () => {
           {/* Access code card */}
           <div className="flex flex-col gap-4 w-full sm:w-auto">
             <Card className="w-full sm:max-w-sm rounded-2xl! border-white/20!">
-              <OtpBox
-                label="Enter Access Code"
-                length={OTP_LENGTH}
-                value={otp}
-                onChange={(val) => {
-                  setError("");
-                  setOtp(val);
-                }}
-                onKeyDownForSubmit={handleContinue}
-              />
+              <label className="block text-start">
+                <span className="text-white/90 font-semibold">Enter Access Code</span>
+                <input
+                  type="text"
+                  value={otp}
+                  spellCheck={false}
+                  autoComplete="off"
+                  placeholder="XXXX-XXXX-XXXX"
+                  maxLength={CODE_LEN + CODE_GROUPS - 1}
+                  onChange={(e) => {
+                    setError("");
+                    setOtp(formatCode(e.target.value));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleContinue();
+                  }}
+                  className="mt-2 w-full rounded-xl bg-white/10 border border-white/25 px-4 py-3 text-white tracking-[0.18em] font-mono uppercase placeholder:text-white/40 focus:outline-none focus:border-white/60"
+                />
+              </label>
               {error && (
                 <p className="text-red-400 text-sm mt-2 text-start">{error}</p>
               )}
