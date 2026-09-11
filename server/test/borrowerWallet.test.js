@@ -53,3 +53,45 @@ test('BORROWER · neither side set yields empty, so the caller can 400', () => {
   const r = pickBorrowerWallet({ stamped: '', bound: '', hasPool: false });
   assert.strictEqual(r.wallet, '');
 });
+
+// ── Binding confirmation ────────────────────────────────────────────────
+
+const { hasConfirmedBinding } = require('../routes/poolTx');
+
+test('BINDING · a seeded primaryWallet is not a confirmed binding', () => {
+  // Seeding writes primaryWallet directly and leaves the array empty. This is
+  // the exact shape that let three pools deploy against the wrong borrower:
+  // the address looks bound, but nobody ever signed for it.
+  assert.strictEqual(
+    hasConfirmedBinding({ primaryWallet: SEEDED, walletAddress: [] }),
+    false,
+  );
+});
+
+test('BINDING · a signed bind counts', () => {
+  assert.strictEqual(
+    hasConfirmedBinding({ primaryWallet: AWAIS, walletAddress: [{ address: AWAIS, name: 'Primary Wallet' }] }),
+    true,
+  );
+});
+
+test('BINDING · a stale array entry does not vouch for a different primary', () => {
+  // Rebinding moves primaryWallet; an old entry left in the array must not
+  // make the new address look confirmed.
+  assert.strictEqual(
+    hasConfirmedBinding({ primaryWallet: SEEDED, walletAddress: [{ address: AWAIS }] }),
+    false,
+  );
+});
+
+test('BINDING · casing differences still match', () => {
+  assert.strictEqual(
+    hasConfirmedBinding({ primaryWallet: AWAIS, walletAddress: [{ address: AWAIS.toLowerCase() }] }),
+    true,
+  );
+});
+
+test('BINDING · no profile and no wallet are both unconfirmed', () => {
+  assert.strictEqual(hasConfirmedBinding(null), false);
+  assert.strictEqual(hasConfirmedBinding({ primaryWallet: '', walletAddress: [] }), false);
+});

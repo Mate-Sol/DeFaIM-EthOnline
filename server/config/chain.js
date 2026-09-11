@@ -42,7 +42,12 @@ const ONCHAIN_ADMIN_WALLETS = (process.env.ONCHAIN_ADMIN_WALLETS || '')
 
 // Cache the provider across requires — a new JsonRpcProvider opens a socket
 // pool, no need to recreate it per call. Ethers v6 handles connection reuse.
-const provider = new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID);
+const { throttleProvider } = require('./rpcThrottle');
+
+// Every RPC request in the process goes through one throttle. Arc limits
+// sustained rate, so per-call-site batching alone still trips it once there
+// are more than a couple of pools to read.
+const provider = throttleProvider(new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID));
 
 function getProvider() {
   return provider;

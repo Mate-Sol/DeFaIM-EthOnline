@@ -699,6 +699,26 @@ function pickBorrowerWallet({ stamped, bound, hasPool }) {
   return { wallet: b, changed: true };
 }
 
+/**
+ * Did this PSP actually bind their wallet, or is the address just seeded?
+ *
+ * `/auth/wallet/bind` pushes into `walletAddress` after verifying a signature;
+ * seeding writes `primaryWallet` directly and leaves the array empty. So an
+ * empty array means nobody ever proved ownership of that address.
+ *
+ * This distinction is not cosmetic. Connecting MetaMask to the site looks
+ * identical to binding from the operator's side, so a PSP who skips the Bind
+ * step gets a pool minted against whatever address the seed left behind — and
+ * that borrower is immutable once deployed. The pool funds, looks healthy, and
+ * fails only when the real PSP tries to draw down.
+ */
+function hasConfirmedBinding(profile) {
+  const bound = validAddr(walletOf(profile));
+  if (!bound) return false;
+  const list = Array.isArray(profile?.walletAddress) ? profile.walletAddress : [];
+  return list.some((w) => validAddr(w?.address)?.toLowerCase() === bound.toLowerCase());
+}
+
 async function resolveBorrowerWallet(facility) {
   if (!facility) return '';
   const profile = await PSPProfile.findById(facility.pspProfileId).lean();
@@ -833,6 +853,23 @@ router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) 
       const facDoc = await Facility.findById(body.facilityId);
       if (!facDoc) return res.status(404).json({ message: 'Facility not found' });
       const borrower = await resolveBorrowerWallet(facDoc);
+      // Refuse to mint a pool whose borrower nobody has proved they control.
+      // Deploying is irreversible: the wrong borrower cannot be corrected
+      // afterwards, and the failure only shows up at drawdown.
+      if (!facDoc.poolPda && process.env.ALLOW_UNBOUND_BORROWER !== 'true') {
+        const profile = await PSPProfile.findById(facDoc.pspProfileId).lean();
+        if (!hasConfirmedBinding(profile)) {
+          return res.status(409).json({
+            message:
+              `${profile?.companyName || 'This PSP'} has not bound a wallet yet. `
+              + 'Have them sign in, open Wallet and click Bind — connecting MetaMask '
+              + 'is not enough. Deploying now would lock the pool to '
+              + `${borrower || 'an unverified address'}, which cannot be changed later.`,
+            code: 'PSP_WALLET_NOT_BOUND',
+            wouldDeployAgainst: borrower || null,
+          });
+        }
+      }
       const fac = facDoc.toObject();
       if (borrower) fac.pspWallet = borrower;
       body = mergeFacilityTerms(fac, body);
@@ -1013,3 +1050,4 @@ module.exports = router;
 // Exported for unit tests; the route is the only production caller.
 module.exports.mergeFacilityTerms = mergeFacilityTerms;
 module.exports.pickBorrowerWallet = pickBorrowerWallet;
+module.exports.hasConfirmedBinding = hasConfirmedBinding;
