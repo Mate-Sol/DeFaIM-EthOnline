@@ -461,9 +461,19 @@ router.get('/pools', async (req, res) => {
         const fresh = doc?.lastIndexedAt
           && (Date.now() - new Date(doc.lastIndexedAt).getTime()) < STALE_MS;
 
-        const shaped = fresh
-          ? shapePoolFromDoc(doc)
-          : shapePoolResponse(doc, await svc.readPoolState(poolAddress));
+        // A pool whose live read fails should not take the whole list with
+        // it — fall back to the cached row when there is one.
+        let shaped;
+        if (fresh) {
+          shaped = shapePoolFromDoc(doc);
+        } else {
+          try {
+            shaped = shapePoolResponse(doc, await svc.readPoolState(poolAddress));
+          } catch (e) {
+            if (!doc) throw e;
+            shaped = shapePoolFromDoc(doc);
+          }
+        }
 
         shaped.pspName = await labelFor(poolAddress, shaped.pspName);
         shaped.countActiveDrawdowns = await DrawdownState.countDocuments({ pool: poolAddress, repaid: false });

@@ -233,15 +233,44 @@ async function readDrawdown(poolAddress, ref) {
   };
 }
 
+/**
+ * Retry a read that failed for transport reasons.
+ *
+ * Arc's RPC intermittently answers a perfectly valid eth_call with an error
+ * carrying no revert data. ethers surfaces that as CALL_EXCEPTION with
+ * data=null, which is indistinguishable at a glance from a real revert — and
+ * because a single failure anywhere aborts the request, one flaky call takes
+ * out a whole page.
+ *
+ * A genuine revert carries data and is rethrown immediately; there is no point
+ * retrying a call the contract has refused.
+ */
+async function withRetry(fn, { attempts = 3, delayMs = 250 } = {}) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const isTransport = !e?.data && !e?.reason;
+      if (!isTransport) throw e;
+      lastErr = e;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function readAllPools() {
   const factory = getFactory();
-  const count = Number(await factory.poolCount());
+  const count = Number(await withRetry(() => factory.poolCount()));
   // Sequential to avoid slamming the RPC with poolCount concurrent calls
   // when count is high. On testnets this stays small enough that a serial
   // loop is fine (~50-100ms total for 20 pools).
   const pools = [];
   for (let i = 0; i < count; i++) {
-    pools.push(await factory.pools(i));
+    pools.push(await withRetry(() => factory.pools(i)));
   }
   return pools;
 }
@@ -466,6 +495,7 @@ module.exports = {
   readDrawdown,
   readDrawdownsFromChain,
   readAllPools,
+  withRetry,
   readPspRecord,
   readLpPosition,
   balanceOfStablecoin,
