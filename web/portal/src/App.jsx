@@ -58,6 +58,53 @@ const PageLoader = () => (
   </div>
 );
 
+const LENDER_URL =
+  import.meta.env.VITE_LENDER_URL || 'https://defa-arc-hackathon.invoicemate.net';
+
+/**
+ * Shown for any route this app does not have. The common case is someone
+ * reaching for the lender portal on the admin host, so say so rather than
+ * leaving a blank page.
+ */
+const NotFound = () => {
+  const wantedLender = window.location.pathname.startsWith('/lender');
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: '#f8fafc', padding: 24,
+    }}>
+      <div style={{ maxWidth: 460, textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>
+          Page not found
+        </h1>
+        <p style={{ color: '#475569', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>
+          {wantedLender
+            ? 'The lender portal is a separate site — it is not on this address.'
+            : `No page at ${window.location.pathname} on the PSP & Admin portal.`}
+        </p>
+        {wantedLender && (
+          <a href={LENDER_URL}
+             style={{
+               display: 'inline-block', padding: '10px 18px', borderRadius: 999,
+               background: '#2540D8', color: '#fff', fontWeight: 600,
+               fontSize: 14, textDecoration: 'none', marginRight: 8,
+             }}>
+            Go to the lender portal
+          </a>
+        )}
+        <a href="/login"
+           style={{
+             display: 'inline-block', padding: '10px 18px', borderRadius: 999,
+             border: '1px solid #cbd5e1', color: '#0f172a',
+             fontWeight: 600, fontSize: 14, textDecoration: 'none',
+           }}>
+          PSP &amp; Admin sign in
+        </a>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -344,8 +391,11 @@ function App() {
 
             {/* Unified landing page — role chooser */}
             <Route path="/" element={<Landing />} />
-            {/* Catch all - redirect to login */}
-            {/* <Route path="*" element={<Navigate to="/login" replace />} /> */}
+            {/* Catch all. Without this an unknown path renders a blank white
+                page with nothing in the console — indistinguishable from the
+                app being down. The lender portal is a separate deployment, so
+                /lender/* on this host is the mistake people actually make. */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </Router>
