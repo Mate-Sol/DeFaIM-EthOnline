@@ -302,7 +302,10 @@ const UserManagement = () => {
                         ))}
                       </div>
                     </div>
-{/* 
+{/* The only route from this read-only summary to the screen where an
+                        application is actually approved. Commented out, it left every
+                        reviewer looking at an application "In Review" with nothing to
+                        press and no indication of where the decision is made. */}
                     <div className="pt-6 border-t border-gray-100">
                       <button
                         onClick={() => navigate(`/admin/application/${userDetail.profile._id}`)}
@@ -311,7 +314,7 @@ const UserManagement = () => {
                         <ExternalLink className="w-5 h-5" />
                         Go to Full Application Review
                       </button>
-                    </div> */}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center p-12">
