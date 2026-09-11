@@ -65,7 +65,17 @@ const Wallet = () => {
           <div className="mb-8">
             <WalletBindButton
               boundWallet={profile?.primaryWallet}
-              onBound={(addr) => setProfile({ ...profile, primaryWallet: addr })}
+              signedWallets={profile?.walletAddress}
+              onBound={(addr) => setProfile({
+                ...profile,
+                primaryWallet: addr,
+                walletAddress: [
+                  { address: addr, name: 'Primary Wallet' },
+                  ...(profile?.walletAddress || []).filter(
+                    (w) => String(w?.address || '').toLowerCase() !== addr.toLowerCase(),
+                  ),
+                ],
+              })}
             />
           </div>
 
