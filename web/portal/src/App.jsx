@@ -67,7 +67,18 @@ const LENDER_URL =
  * leaving a blank page.
  */
 const NotFound = () => {
-  const wantedLender = window.location.pathname.startsWith('/lender');
+  const path = window.location.pathname;
+
+  // A doubled slash is the common typo when a documented path like
+  // /onchain-admin/initialize is pasted onto a base URL that already ends in
+  // one. The route is real; only the address is malformed. Repair it rather
+  // than making someone spot a duplicate "/" by eye.
+  const collapsed = path.replace(/\/{2,}/g, '/');
+  if (collapsed !== path) {
+    return <Navigate to={collapsed + window.location.search} replace />;
+  }
+
+  const wantedLender = path.startsWith('/lender');
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -80,7 +91,7 @@ const NotFound = () => {
         <p style={{ color: '#475569', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>
           {wantedLender
             ? 'The lender portal is a separate site — it is not on this address.'
-            : `No page at ${window.location.pathname} on the PSP & Admin portal.`}
+            : `No page at ${path} on the PSP & Admin portal.`}
         </p>
         {wantedLender && (
           <a href={LENDER_URL}
