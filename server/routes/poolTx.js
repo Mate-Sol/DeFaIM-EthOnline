@@ -727,6 +727,44 @@ function mergeFacilityTerms(fac, body) {
  * ordering is preserved via explicit tuple assembly (ethers accepts
  * either named or ordered).
  */
+/**
+ * Bind a facility to the pool that was just created for it.
+ *
+ * The indexer does this too, but on a poll cycle — and until it runs, the
+ * facility still sits in the Initialize Queue offering a button whose only
+ * possible outcome is "Factory: PSP has live pool". An operator who clicks it
+ * loses time they may not have: the funding window is already counting down.
+ *
+ * Called by the queue as soon as createPool confirms. Idempotent, and reads
+ * the pool address from the factory rather than trusting the caller.
+ */
+router.post('/admin/confirm-pool-init/:facilityId', authMiddleware, async (req, res) => {
+  try {
+    if (!requireOnchainAdmin(req, res)) return;
+    const facility = await Facility.findById(req.params.facilityId);
+    if (!facility) return res.status(404).json({ message: 'Facility not found' });
+    if (facility.poolPda) {
+      return res.json({ poolPda: facility.poolPda, status: facility.status, alreadyBound: true });
+    }
+
+    const factory = svc.getFactory();
+    const rec = await factory.psps(facility.pspWallet);
+    const pool = rec?.activePool ?? rec?.[1];
+    if (!pool || /^0x0+$/.test(pool)) {
+      return res.status(409).json({ message: 'No pool on chain for this borrower yet' });
+    }
+
+    facility.poolPda = pool;
+    facility.vaultPda = pool;
+    facility.status = 'FUNDING';
+    await facility.save();
+    res.json({ poolPda: pool, status: facility.status });
+  } catch (e) {
+    console.error('[admin/confirm-pool-init]', e);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) => {
   try {
     if (!requireOnchainAdmin(req, res)) return;

@@ -92,8 +92,17 @@ const InitializeQueue = () => {
         },
       );
       toast.success(`Pool deployed · tx ${init.hash.slice(0, 10)}…`, { id: 'init' });
-      // Indexer takes ~90s to mirror; refresh in the background so the row
-      // eventually disappears from AWAITING_POOL_INIT.
+
+      // Bind the facility to its new pool now rather than waiting for the
+      // indexer's poll. Until that binding happens the facility stays in this
+      // queue, still offering a button that can only fail with "PSP has live
+      // pool" — and the funding window is already running down while the
+      // operator works out why.
+      try {
+        await api().post(`/pool/admin/confirm-pool-init/${facility._id}`);
+      } catch {
+        // The indexer reconciles anyway; the row just clears a cycle later.
+      }
       refresh();
     } catch (e) {
       toast.error(e.response?.data?.message || e.shortMessage || e.message, { id: 'init' });
