@@ -126,42 +126,22 @@ const Wallet = () => {
             </div>
           )}
 
-          {/* Transaction History */}
+          {/* Transaction History.
+
+              This listed a `transactions` array that no longer exists — the
+              reference survived while the data behind it did not, so the whole
+              page threw ReferenceError and rendered blank. A blank page here is
+              worse than a missing section: wallet binding lives on this page,
+              and binding is a prerequisite for requesting a facility, so anyone
+              who landed here saw nothing and moved on believing it was done.
+
+              Left as an honest empty state until it is wired to real data. */}
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Transaction History</h2>
-            <div className="space-y-4">
-              {transactions.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'Disbursement' ? 'bg-green-100' : 'bg-blue-100'
-                      }`}>
-                      {tx.type === 'Disbursement' ? (
-                        <ArrowDownLeft className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{tx.type}</p>
-                      <p className="text-sm text-gray-500">{tx.date}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${tx.type === 'Disbursement' ? 'text-green-600' : 'text-blue-600'}`}>
-                      {tx.type === 'Disbursement' ? '+' : '-'}{formatCurrency(tx.amount)}
-                    </p>
-                    <a
-                      href={`${txExplorerUrl(tx.txHash)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-brand-purple hover:underline"
-                    >
-                      View on Arcscan
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-gray-500">
+              On-chain activity for this wallet isn't shown here yet — see the facility
+              page for drawdowns and repayments.
+            </p>
           </div>
         </div>
       </main>
