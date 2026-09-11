@@ -674,10 +674,58 @@ router.post('/psp/build-tx/settle-commit-fee', authMiddleware, authorizeRoles('P
  * gated on-chain. Admin's browser wallet signs this — server just
  * returns calldata.
  */
+/**
+ * Resolve the borrower wallet a facility should actually deploy against.
+ *
+ * `facility.pspWallet` is stamped when the facility is *requested*, which can
+ * be before the PSP has bound a wallet at all — or while an operator's own
+ * address is still sitting in `primaryWallet` from a seed. Deploying against
+ * that stale value mints a pool whose borrower can never draw down or repay,
+ * and nothing about it looks wrong until the PSP tries and reverts.
+ *
+ * So prefer the profile's current binding, and write the correction back to
+ * the facility so `confirm-pool-init` — which looks the pool up via
+ * `factory.psps(facility.pspWallet)` — resolves the same address we deployed.
+ * Only safe before a pool exists; afterwards the on-chain borrower is fixed
+ * and the stamped value is the historical truth.
+ */
+function pickBorrowerWallet({ stamped, bound, hasPool }) {
+  const s = validAddr(stamped) || '';
+  const b = validAddr(bound) || '';
+  // A deployed pool's borrower is immutable on chain; the stamped value is
+  // then the historical truth and must not be rewritten.
+  if (hasPool) return { wallet: s, changed: false };
+  if (!b || b.toLowerCase() === s.toLowerCase()) return { wallet: s, changed: false };
+  return { wallet: b, changed: true };
+}
+
+async function resolveBorrowerWallet(facility) {
+  if (!facility) return '';
+  const profile = await PSPProfile.findById(facility.pspProfileId).lean();
+  const { wallet, changed } = pickBorrowerWallet({
+    stamped: facility.pspWallet,
+    bound: walletOf(profile),
+    hasPool: Boolean(facility.poolPda),
+  });
+  if (changed) {
+    await Facility.updateOne({ _id: facility._id, poolPda: { $in: [null, ''] } },
+      { $set: { pspWallet: wallet } });
+  }
+  return wallet;
+}
+
 router.post('/admin/build-tx/approve-psp', authMiddleware, async (req, res) => {
   try {
     if (!requireOnchainAdmin(req, res)) return;
-    const psp = validAddr(req.body?.pspWallet);
+    // The queue sends the wallet it rendered, which may predate the PSP's
+    // bind. When a facility is named, the facility's own resolution wins —
+    // approving one address and deploying against another just reverts with
+    // "Factory: PSP not approved" two steps later.
+    let psp = validAddr(req.body?.pspWallet);
+    if (req.body?.facilityId) {
+      const fac = await Facility.findById(req.body.facilityId);
+      if (fac) psp = (await resolveBorrowerWallet(fac)) || psp;
+    }
     if (!psp) return res.status(400).json({ message: 'pspWallet (address) required' });
     const tx = svc.encodeApprovePsp(psp);
     res.json({ to: tx.to, data: tx.data, value: tx.value.toString() });
@@ -782,8 +830,11 @@ router.post('/admin/build-tx/initialize-pool', authMiddleware, async (req, res) 
     // Preload from Facility doc if facilityId is passed.
     let body = { ...(req.body || {}) };
     if (body.facilityId) {
-      const fac = await Facility.findById(body.facilityId).lean();
-      if (!fac) return res.status(404).json({ message: 'Facility not found' });
+      const facDoc = await Facility.findById(body.facilityId);
+      if (!facDoc) return res.status(404).json({ message: 'Facility not found' });
+      const borrower = await resolveBorrowerWallet(facDoc);
+      const fac = facDoc.toObject();
+      if (borrower) fac.pspWallet = borrower;
       body = mergeFacilityTerms(fac, body);
     }
 
@@ -961,3 +1012,4 @@ router.get('/pool/:pool/fee-aggregates', NOT_IMPLEMENTED('B3c'));
 module.exports = router;
 // Exported for unit tests; the route is the only production caller.
 module.exports.mergeFacilityTerms = mergeFacilityTerms;
+module.exports.pickBorrowerWallet = pickBorrowerWallet;
