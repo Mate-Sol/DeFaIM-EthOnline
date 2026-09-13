@@ -334,6 +334,42 @@ router.post('/lender/build-tx/redeem', authMiddleware, async (req, res) => {
  * hardcoded placeholder numbers — a $1,500 deposit and $48.75 of projected
  * earnings shown to every visitor regardless of what they actually hold.
  */
+/**
+ * Portfolio risk findings, reasoned from live Subgraph data.
+ *
+ * This route deliberately does not read the chain. The Subgraph is the source
+ * of record for cross-facility questions — "which drawdowns are past grace",
+ * "is one borrower holding the whole book" — because answering them from RPC
+ * means one call per pool per field, which is exactly the pattern that trips
+ * Arc's rate limiter and returns a bare revert with no data.
+ */
+router.get('/risk/findings', authMiddleware, async (req, res) => {
+  try {
+    const { fetchFacilities } = require('../../agent/src/graph');
+    const { evaluate } = require('../../agent/src/rules');
+
+    // The demo factory builds with SECONDS_PER_DAY = 60, so "days overdue"
+    // must be judged on the clock the facility was deployed against.
+    const secondsPerDay = parseInt(process.env.CONTRACT_SECONDS_PER_DAY || '86400', 10);
+
+    const { facilities, meta } = await fetchFacilities();
+    const now = Number(meta?.block?.timestamp ?? Math.floor(Date.now() / 1000));
+    const findings = evaluate(facilities, { now, secondsPerDay });
+
+    res.json({
+      indexedBlock: meta?.block?.number ?? null,
+      hasIndexingErrors: Boolean(meta?.hasIndexingErrors),
+      facilitiesChecked: facilities.length,
+      counts: findings.reduce((a, f) => ({ ...a, [f.severity]: (a[f.severity] ?? 0) + 1 }), {}),
+      findings,
+    });
+  } catch (e) {
+    // Say plainly that the data source is down rather than returning an empty
+    // list, which would read as "no risks found".
+    res.status(503).json({ message: `Subgraph unavailable: ${e.message}` });
+  }
+});
+
 router.get('/lender/position/:pool', authMiddleware, async (req, res) => {
   try {
     const pool = validAddr(req.params.pool);

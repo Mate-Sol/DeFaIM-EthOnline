@@ -1,0 +1,12 @@
+{
+  "name": "defa-risk-agent",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "Risk monitor for DeFa credit facilities, reasoning over live Subgraph data",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "demo": "node src/index.js --demo-clock",
+    "test": "node --test test/rules.test.js"
+  }
+}

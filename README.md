@@ -47,6 +47,24 @@ of our own: `Deposit` and `Withdrawal` carry the standard `sender` / `owner` /
 4626 vaults, with no protocol-specific knowledge — a credit facility presented
 through the same interface as a yield vault.
 
+**Risk monitor (`agent/`).** The Subgraph is not only displayed, it is reasoned
+over. The monitor reads live facility state and decides what a human needs to
+look at: drawdowns past their grace window accruing uncapped penalties,
+facilities approaching finality with debt still outstanding, funding windows
+that closed and were never finalised, and single-borrower concentration across
+the book. It has no RPC client and no database — if the Subgraph is down the
+agent has nothing to reason about, which is the honest test of whether an
+integration is load-bearing.
+
+```
+node agent/src/index.js --demo-clock     # exits 1 if anything is CRITICAL
+```
+
+The same rules back `GET /pool/risk/findings`, which is how the on-chain admin
+sees portfolio risk. Cross-facility questions are answered from the Subgraph
+rather than RPC: asking them over JSON-RPC means one call per pool per field,
+which is precisely the pattern that trips Arc's rate limiter.
+
 **Wallets.** Lenders and borrowers connect an EOA through RainbowKit/wagmi and prove
 ownership with a SIWE signature; that bound wallet is stamped into the pool as the
 borrower and is the only address the contract accepts repayment from. Drawdown release
@@ -59,6 +77,7 @@ contracts/   Foundry — pool, factory, treasury reserve
 server/      Node + Express + Mongoose — API, indexer, transaction builders
 web/         Lender and borrower interfaces
 subgraph/    The Graph — schema, manifest, mappings
+agent/       Risk monitor reasoning over live Subgraph data
 docs/        Architecture, protocol mechanics, deployments
 ```
 
