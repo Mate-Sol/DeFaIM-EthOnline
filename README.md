@@ -8,6 +8,38 @@ deployed as revolving credit lines to licensed cross-border payment companies, w
 against verified receivables to pre-fund payouts. Draws are repaid on settlement (T+1–T+7),
 and yield flows back to LPs through an on-chain repayment waterfall.
 
+## Why this exists
+
+A payment service provider pays a merchant out today and is paid by the corridor in three
+to seven days. Someone has to fund that gap, on every transaction, forever. It is the
+single largest constraint on how much volume a PSP can process — not demand, not
+licensing, working capital.
+
+Today that gap is funded by bank credit: weeks to underwrite, quarterly reporting,
+relationship-priced, and sized to a balance sheet rather than to the receivables it is
+actually secured against. A PSP that doubles its volume waits a quarter for a limit
+increase it can already collateralise.
+
+DeFa is that facility, rebuilt so the credit process is enforced by the contract instead
+of reported after the fact. A credit committee still underwrites — KAM, then credit
+analysis, then risk — and the terms they approve become the pool's parameters. After
+that the borrower draws and repays without asking anyone, inside a line that cannot be
+exceeded, at a rate that accrues per second rather than per statement.
+
+It is undercollateralised institutional credit, which is the part DeFi normally cannot do.
+The collateral is the receivable and the underwriting, not 150% of the loan in volatile
+tokens. What makes that safe is that every constraint the committee agreed to is checked
+on-chain at the moment money moves: the borrower wallet is fixed at facility creation, the
+receiver must be pre-authorised, the draw must fit the line, and the finance charge is
+computed by the contract, not invoiced.
+
+**Why USDC on Arc.** A PSP's whole business is denominated in dollars that must settle
+now. On Arc, USDC *is* the native gas token, so the facility is funded, drawn, repaid and
+priced in the same unit the borrower already operates in — no bridge, no wrapped asset, no
+second token to hold just to pay for a transaction. For a credit product whose entire
+purpose is settlement timing, that removes the one thing that would otherwise reintroduce
+it.
+
 ## How it works
 
 ```
