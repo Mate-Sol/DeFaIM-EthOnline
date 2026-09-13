@@ -42,8 +42,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Repo root, not ./server: the API serves risk findings from the
+          # rules in agent/, so the image has to carry that directory too.
           - image: matesol/arc-be
-            context: ./server
+            context: .
+            dockerfile: ./server/Dockerfile
           - image: matesol/arc-ui
             context: ./web/lender
           - image: matesol/arc-admin
@@ -70,7 +73,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
-          file: ${{ matrix.context }}/Dockerfile
+          file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.context) }}
           push: true
           no-cache: true
           tags: ${{ matrix.image }}:main

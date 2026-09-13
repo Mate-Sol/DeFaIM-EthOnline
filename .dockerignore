@@ -1,0 +1,25 @@
+# Root build context — used by the server image, which needs both server/ and
+# agent/. Without this the context also uploads every web bundle and every
+# node_modules tree in the repo, which is slow and bakes secrets into layers.
+
+**/node_modules
+.git
+.gitignore
+**/*.log
+.DS_Store
+**/coverage
+
+# Secrets — supplied at runtime by the deployment, never baked in.
+**/.env
+**/.env.*
+!**/.env.example
+!web/*/.env.production
+
+# Nothing the API needs at runtime.
+web/
+contracts/out/
+contracts/cache/
+contracts/lib/
+subgraph/build/
+subgraph/generated/
+docs/
