@@ -154,7 +154,21 @@ Deployed addresses are listed in [`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md).
 
 ## Getting started
 
-Setup instructions are in [`docs/LOCAL.md`](docs/LOCAL.md).
+**Reviewing this project?** [`docs/DEMO.md`](docs/DEMO.md) has the live URLs, demo
+accounts, and the two commands that need no setup at all:
+
+```bash
+node agent/src/index.js --demo-clock   # risk agent — no install, no env, no keys
+```
+
+Its only data source is the Subgraph:
+`https://api.studio.thegraph.com/query/1760269/defa-arc/v0.0.1`
+
+Running the stack locally is covered in the same document, and every contract
+address is in [`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md).
+
+No private key or API secret is committed to this repository — `.env` is
+gitignored and only `.env.example` ships, with empty values.
 
 ## License
 
