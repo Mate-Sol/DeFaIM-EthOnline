@@ -552,12 +552,17 @@ router.get('/pools', async (req, res) => {
         // never finished loading.
         //
         // Only pools the indexer has never seen are read live.
-        let shaped;
-        if (doc) {
-          shaped = shapePoolFromDoc(doc);
-        } else {
-          shaped = shapePoolResponse(doc, await svc.readPoolState(poolAddress));
+        // Never read a pool live here. This route lists the whole book, so one
+        // live read per pool is one live read too many: it is what took the
+        // listing past two minutes and left the marketplace spinning. A pool
+        // the indexer has not recorded yet is listed from its address alone
+        // and fills in on the next tick — a row with missing numbers is
+        // recoverable, a page that never loads is not.
+        if (!doc) {
+          rows.push(shapePoolFromDoc({ pubkey: poolAddress, pending: true }));
+          continue;
         }
+        const shaped = shapePoolFromDoc(doc);
 
         shaped.pspName = await labelFor(poolAddress, shaped.pspName);
         shaped.countActiveDrawdowns = await DrawdownState.countDocuments({ pool: poolAddress, repaid: false });

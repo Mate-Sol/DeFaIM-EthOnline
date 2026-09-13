@@ -32,6 +32,7 @@ const { ethers } = require('ethers');
 const { getProvider, getFactoryAddress } = require('../config/chain');
 const {
   readPoolState,
+  readAllPools,
   getFactory,
   getPool,
 } = require('../services/poolServiceEvm');
@@ -233,6 +234,25 @@ async function tick() {
     }
 
     // 2. Snapshot state for every known pool
+    // Snapshot every pool the factory has ever created, not only the ones a
+    // PoolCreated event happened to land in the rolling window. A pool the
+    // indexer never recorded has no cached row, and /pool/pools then has
+    // nothing to serve for it — which is what left the lender marketplace
+    // reading seventeen pools live and spinning for two minutes.
+    try {
+      const all = await readAllPools();
+      const seen = new Set(
+        (await PoolState.find({}).select('pubkey').lean()).map((d) => d.pubkey),
+      );
+      for (const addr of all) {
+        if (seen.has(addr)) continue;
+        await PoolState.updateOne({ pubkey: addr }, { $setOnInsert: { pubkey: addr } }, { upsert: true });
+        console.log(`[evmIndexer] discovered unindexed pool ${addr}`);
+      }
+    } catch (e) {
+      console.warn('[evmIndexer] pool discovery failed:', e.message);
+    }
+
     const knownPools = await PoolState.find({}).select('pubkey').lean();
     for (const { pubkey } of knownPools) {
       if (!pubkey || !pubkey.startsWith('0x')) continue; // skip non-EVM rows
