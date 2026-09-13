@@ -38,8 +38,14 @@ conditional, multi-step operation rather than a trusted backend call.
 
 **The Graph (data).** A Subgraph indexes both factories and, by template, every pool
 clone they deploy — deposits and withdrawals in the ERC-4626 event shape, drawdowns,
-repayments with their finance charge, and lender yield and principal claims — exposing
-facility state as a queryable vault feed.
+repayments with their finance charge, and lender yield and principal claims.
+
+The schema is built on the **ERC-4626 tokenised vault standard** rather than a shape
+of our own: `Deposit` and `Withdrawal` carry the standard `sender` / `owner` /
+`assets` / `shares` fields, and each `Facility` exposes `asset`, `totalAssets` and
+`totalSupply`. A DeFa facility is therefore legible to any tool that already reads
+4626 vaults, with no protocol-specific knowledge — a credit facility presented
+through the same interface as a yield vault.
 
 **Wallets.** Lenders and borrowers connect an EOA through RainbowKit/wagmi and prove
 ownership with a SIWE signature; that bound wallet is stamped into the pool as the
@@ -53,8 +59,19 @@ contracts/   Foundry — pool, factory, treasury reserve
 server/      Node + Express + Mongoose — API, indexer, transaction builders
 web/         Lender and borrower interfaces
 subgraph/    The Graph — schema, manifest, mappings
-docs/        Architecture, contracts, API, repayment logic
+docs/        Architecture, protocol mechanics, deployments
 ```
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagrams, components, lifecycle, money flows, trust model |
+| [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | Fees, repayment waterfall, invariants, default handling |
+| [`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md) | Contract addresses on Arc Testnet |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Running the stack |
+
+**Subgraph endpoint:** `https://api.studio.thegraph.com/query/1760269/defa-arc/v0.0.1`
 
 ## Network
 
