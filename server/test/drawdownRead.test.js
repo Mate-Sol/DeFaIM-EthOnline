@@ -49,3 +49,24 @@ test('DRAWDOWN · the walk is bounded so a misbehaving RPC cannot hang it', asyn
   assert.ok(out.length <= 256, 'walk must stop at the cap');
   assert.strictEqual(calls, out.length);
 });
+
+// ── ABI coverage ────────────────────────────────────────────────────────
+
+const { getPool } = require('../services/poolServiceEvm');
+
+/**
+ * The server keeps its own hand-written human-readable ABI, separate from the
+ * JSON the Subgraph uses. When a read is written against the JSON but the
+ * server's copy lacks the function, the call throws — and here that throw was
+ * indistinguishable from "end of array", so the storage walk silently returned
+ * nothing. The fix looked deployed while changing nothing at all.
+ */
+test('DRAWDOWN · the server ABI exposes every function the reader calls', () => {
+  const pool = getPool('0x71300bA34A75B5Cc788F324aCf775767Dd215A06');
+  const names = pool.interface.fragments
+    .filter((f) => f.type === 'function')
+    .map((f) => f.name);
+  for (const fn of ['drawDownRefs', 'getDrawDown', 'getRepaymentOwed', 'outstanding']) {
+    assert.ok(names.includes(fn), `server ABI is missing ${fn}()`);
+  }
+});

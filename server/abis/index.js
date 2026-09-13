@@ -91,6 +91,13 @@ const PoolContractAbi = [
   'function currentDay() external view returns (uint256)',
   'function isAuthorizedReceiver(address) external view returns (bool)',
   'function getDrawDown(bytes32) external view returns (tuple(uint256 principal,uint256 startTs,uint256 expiryTs,address receiverWallet))',
+  // Public array of every *unrepaid* ref — repayment swap-and-pops the entry.
+  // This is the authoritative open-drawdown set, and reading it is what lets
+  // the repay screen list a debt without scanning a block window that the
+  // drawdown may have fallen out of.
+  'function drawDownRefs(uint256) external view returns (bytes32)',
+  'function refIndex(bytes32) external view returns (uint256)',
+  'function getRepaymentOwed(bytes32) external view returns (uint256 principal,uint256 financeCharge,uint256 total)',
   'function getRepaymentOwed(bytes32) external view returns (uint256)',
   'function getLpPosition(address) external view returns (uint256 principal,uint256 fundingCredit,uint256 lastUpdate,uint256 dollarSeconds,uint256 claimedYield,uint256 claimedPrincipal,uint256 claimedOverrunYield,uint256 claimedBonus,bool finalized)',
   'function getClaimableYieldBreakdown(address) external view returns (uint256,uint256,uint256)',
