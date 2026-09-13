@@ -132,6 +132,14 @@ against a facility already in funding.
 
 ### 4 · Fund it — *lender*
 
+> **A facility is open right now:** `0x41A52E7337654E1B79C083EFB6Fc6EE1D3968aA2`
+> — soft cap **1 USDC**, hard cap 20. The soft cap is deliberately one dollar,
+> because Circle's faucet grants roughly 1 USDC per day: a single claim is
+> enough to meet it, activate the facility and reach a drawdown. If its funding
+> window has closed by the time you read this, open an issue and we will deploy
+> another.
+
+
 Sign in to the lender portal → **Pools** → pick one in *lending* → **Deposit**.
 Two signatures: approve USDC, then deposit.
 
