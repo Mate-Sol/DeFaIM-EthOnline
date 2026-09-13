@@ -125,7 +125,7 @@ const DrawdownDetail = () => {
           {!dd.repaid && (
             <button
               onClick={handleRepay}
-              disabled={busy || !wallet.connected}
+              disabled={busy || !isConnected}
               className="defa-btn-primary mt-5"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}

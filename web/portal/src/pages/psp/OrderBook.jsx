@@ -57,12 +57,18 @@ const OrderBook = () => {
       });
     } catch (poolError) {
       console.error('Failed to fetch pool status:', poolError);
-      // Use approved amounts from profile if pool status fails
-      setFinancialData({
-        totalLimit: profileResponse.data.approvedAmount || 0,
-        usedAmount: 0,
-        availableAmount: profileResponse.data.approvedAmount || 0,
-      });
+      // Fall back to the approved limit on the profile. This handler used to
+      // read a `profileResponse` that is never fetched here, so the recovery
+      // path threw a ReferenceError of its own and took the page down blank —
+      // turning a survivable pool-read failure into a dead screen.
+      try {
+        const profileResponse = await pspAPI.getProfile();
+        const approved = profileResponse?.data?.approvedAmount || 0;
+        setFinancialData({ totalLimit: approved, usedAmount: 0, availableAmount: approved });
+      } catch (profileError) {
+        console.error('Failed to fetch profile:', profileError);
+        setFinancialData({ totalLimit: 0, usedAmount: 0, availableAmount: 0 });
+      }
     }
   };
 

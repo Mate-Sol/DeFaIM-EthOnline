@@ -326,6 +326,50 @@ router.post('/lender/build-tx/redeem', authMiddleware, async (req, res) => {
 
 // ── Lender read: portfolio ─────────────────────────────────────────────
 
+/**
+ * One lender's position in one pool, read live from the contract.
+ *
+ * /lender/portfolio walks every pool to build the whole book, which is far too
+ * slow for a single pool page. The pool detail screen was therefore rendering
+ * hardcoded placeholder numbers — a $1,500 deposit and $48.75 of projected
+ * earnings shown to every visitor regardless of what they actually hold.
+ */
+router.get('/lender/position/:pool', authMiddleware, async (req, res) => {
+  try {
+    const pool = validAddr(req.params.pool);
+    if (!pool) return res.status(400).json({ message: 'Invalid pool address' });
+    const lender = validAddr(req.query.wallet) || validAddr(req.user.wallet);
+    if (!lender) return res.status(400).json({ message: 'No lender wallet' });
+
+    const [pos, state] = await Promise.all([
+      svc.readLpPosition(pool, lender),
+      svc.readPoolState(pool).catch(() => null),
+    ]);
+
+    // Yield accrues per dollar-second and is only realised on claim, so what a
+    // lender has "earned" so far is what they have claimed plus what is
+    // currently claimable. Report the claimable part separately rather than
+    // projecting a number the contract has not agreed to.
+    let claimableYield = '0';
+    try {
+      const b = await svc.getPool(pool).getClaimableYieldBreakdown(lender);
+      claimableYield = (b?.total ?? b?.[b.length - 1] ?? 0n).toString();
+    } catch { /* pool may not be active yet */ }
+
+    res.json({
+      pool,
+      lender,
+      principal:        pos.principal.toString(),
+      claimedYield:     pos.claimedYield.toString(),
+      claimedPrincipal: pos.claimedPrincipal.toString(),
+      claimableYield,
+      finalized:        pos.finalized,
+      poolTotalAssets:  state ? state.principal.toString() : null,
+      poolStatus:       state ? state.status : null,
+    });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 router.get('/lender/portfolio', authMiddleware, async (req, res) => {
   try {
     if (req.user.kind !== 'lender') return res.status(403).json({ message: 'Lender JWT required' });

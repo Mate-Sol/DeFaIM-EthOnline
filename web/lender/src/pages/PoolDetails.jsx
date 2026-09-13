@@ -31,6 +31,10 @@ const PoolDetails = () => {
   const { dealId } = useParams();
   const [activeTab, setActiveTab] = useState("my-position");
   const [deal, setDeal] = useState(null);
+  // Live position for the connected lender. Until this resolves the KPI cards
+  // show a dash rather than a plausible-looking number — a wrong figure on a
+  // money screen is worse than an obviously absent one.
+  const [position, setPosition] = useState(null);
 
   const sparkline = [40, 55, 45, 60, 50, 70, 65, 80, 75, 90];
   const barChart = [8, 12, 10, 18, 22, 28, 35, 45, 58, 70, 82, 92, 100];
@@ -39,6 +43,38 @@ const PoolDetails = () => {
 
   const chainInfo =
     chainOptions.find((c) => c?.key === deal?.chain) || chainOptions[0];
+
+  const poolAddress = deal?.pubkey || deal?.poolAddress || dealId;
+
+  useEffect(() => {
+    if (!poolAddress) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axiosInstance.get(`/pool/lender/position/${poolAddress}`);
+        if (!cancelled) setPosition(res?.data ?? res);
+      } catch {
+        if (!cancelled) setPosition(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [poolAddress]);
+
+  // USDC is 6-decimal. Base units in, display string out.
+  const usdc = (base) => {
+    if (base === null || base === undefined) return null;
+    const n = Number(base) / 1e6;
+    if (!Number.isFinite(n)) return null;
+    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const money = (base) => {
+    const v = usdc(base);
+    return v === null ? "—" : `$ ${v}`;
+  };
+  const earned =
+    position
+      ? (BigInt(position.claimedYield || 0) + BigInt(position.claimableYield || 0)).toString()
+      : null;
 
   const handleDealDetails = async () => {
     if (!dealId) return;
@@ -113,8 +149,8 @@ const PoolDetails = () => {
             daysLeft={deal?.status === "awaitingSignatures" ? 0 : deal?.remainingDays}
             ticketSize={deal?.totalLoan?.replace("$ ", "") || "95,000"}
             ticketSizeSub="72.32 USDC"
-            totalDeposit="1,500.00"
-            totalDepositSub="341.2 USDC"
+            totalDeposit={usdc(position?.poolTotalAssets) ?? "—"}
+            totalDepositSub="Committed by lenders"
             apyRate={deal?.apyRate || "13.00%"}
             apyRateSub="Annualized"
             tenure={deal?.loanTenure || "3.5 years"}
@@ -139,15 +175,15 @@ const PoolDetails = () => {
                 <StateCard
                   icon={Wallet}
                   label="My Deposit"
-                  value="$ 1,500.00"
+                  value={money(position?.principal)}
                   chart={sparkline}
                   chartType="area"
                   chartOptions={{ stroke: { curve: "smooth" } }}
                 />
                 <StateCard
                   icon={TrendingUp}
-                  label="Projected Earnings"
-                  value="$ 48.75"
+                  label="Yield Earned"
+                  value={money(earned)}
                   chart={barChart}
                   chartType="bar"
                   chartOptions={{
@@ -160,7 +196,9 @@ const PoolDetails = () => {
                 <StateCard
                   icon={BarChart2}
                   label="Total Proceeds"
-                  value="$ 1,548.75"
+                  value={money(
+                    position ? (BigInt(position.principal || 0) + BigInt(earned || 0)).toString() : null,
+                  )}
                   chart={lineChart}
                   chartType="line"
                   chartOptions={{ markers: { size: 5, strokeColors: "#fff" } }}
@@ -168,7 +206,14 @@ const PoolDetails = () => {
                 <StateCard
                   icon={PieChart}
                   label="Realized Proceeds"
-                  value="$ 1,548.5"
+                  value={money(
+                    position
+                      ? (
+                          BigInt(position.claimedPrincipal || 0) +
+                          BigInt(position.claimedYield || 0)
+                        ).toString()
+                      : null,
+                  )}
                   chart={donutChart}
                   chartType="donut"
                   chartOptions={{
