@@ -179,8 +179,59 @@ async function readPoolState(poolAddress) {
  * current principal is read back per ref, which is also how a repaid drawdown
  * is detected (the pool zeroes the principal on repayment).
  */
+/**
+ * Read the pool's open drawdowns straight out of contract storage.
+ *
+ * `drawDownRefs` is a public array holding every unrepaid ref (repayment
+ * swap-and-pops the entry), so it is the authoritative list of what can still
+ * be repaid — no log scan, no block window, nothing to miss.
+ *
+ * The log-scan path this replaces looked back a fixed 20,000 blocks, which on
+ * Arc is a few hours. A drawdown taken four days earlier fell outside it, so
+ * the borrower's repay screen showed "no drawdowns" for money they were
+ * actively accruing penalties on, and there was no way to repay from the UI.
+ *
+ * Solidity reverts on an out-of-bounds array read, which is how the walk ends.
+ * Arc's RPC also reports *throttling* as a bare revert, so the two are
+ * indistinguishable here — the provider-level throttle retries rate limits
+ * before they reach this code, and MAX_REFS bounds the walk either way.
+ */
+const MAX_REFS = parseInt(process.env.EVM_MAX_DRAWDOWN_REFS || '256', 10);
+
+async function readOpenDrawdownRefs(pool) {
+  const refs = [];
+  for (let i = 0; i < MAX_REFS; i++) {
+    try {
+      refs.push(await pool.drawDownRefs(i));
+    } catch {
+      break; // end of array
+    }
+  }
+  return refs;
+}
+
 async function readDrawdownsFromChain(poolAddress, { includeRepaid = false, lookback = 20000 } = {}) {
   const pool = getPool(poolAddress);
+
+  // The common case — what the borrower still owes — needs no logs at all.
+  if (!includeRepaid) {
+    const out = [];
+    for (const ref of await readOpenDrawdownRefs(pool)) {
+      const dd = await readDrawdown(poolAddress, ref);
+      if (!dd.exists) continue;
+      out.push({
+        pubkey: ref,
+        id: ref,
+        principal: dd.principal.toString(),
+        drawdownDay: Number((dd.startTs || 0n) / 86400n),
+        tenorDays: Number(((dd.expiryTs || 0n) - (dd.startTs || 0n)) / 86400n),
+        repaid: false,
+      });
+    }
+    return out;
+  }
+
+  // Repaid drawdowns are gone from storage, so history still comes from logs.
   const provider = getProvider();
   const latest = await provider.getBlockNumber();
   const earliest = Math.max(0, latest - lookback);
@@ -494,6 +545,7 @@ module.exports = {
   readPoolState,
   readDrawdown,
   readDrawdownsFromChain,
+  readOpenDrawdownRefs,
   readAllPools,
   withRetry,
   readPspRecord,

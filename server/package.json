@@ -8,7 +8,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node seed.js",
-    "test": "node --test test/txHash.test.js test/poolServiceEvm.test.js test/evmIndexer.test.js test/observerAuth.test.js test/poolInitTerms.test.js test/borrowerWallet.test.js test/rpcThrottle.test.js",
+    "test": "node --test test/txHash.test.js test/poolServiceEvm.test.js test/evmIndexer.test.js test/observerAuth.test.js test/poolInitTerms.test.js test/borrowerWallet.test.js test/rpcThrottle.test.js test/drawdownRead.test.js",
     "test:e2e": "node --test test/e2eFlows.test.js test/lifecycleFlows.test.js",
     "test:onchain": "node --test test/onchainFlows.test.js",
     "test:all": "node --test test/e2eFlows.test.js test/lifecycleFlows.test.js test/onchainFlows.test.js"
