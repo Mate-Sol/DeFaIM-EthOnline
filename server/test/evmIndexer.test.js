@@ -117,3 +117,38 @@ test('poolStateToDoc — grace/tenure/day fields are Number, not BigInt', () => 
   assert.strictEqual(doc.graceDays, 3);
   assert.strictEqual(doc.todayDay, 12);
 });
+
+// ── pool claiming ───────────────────────────────────────────────────────
+
+const { canClaimPool } = require('../workers/evmIndexer');
+
+/**
+ * Regression: approving a PSP's second facility bound it to the *first*
+ * facility's pool. factory.psps() returns one live pool per PSP, so every
+ * unbound facility of theirs matched it. The second facility then dropped out
+ * of the Initialize Queue showing another facility's funding progress, and
+ * could never be deployed.
+ */
+test('INDEXER · an unclaimed pool can be bound', () => {
+  assert.strictEqual(canClaimPool({ poolAddr: POOL_ADDR, facilityId: 'f1' }), true);
+});
+
+test('INDEXER · a pool another facility already holds is never re-bound', () => {
+  assert.strictEqual(
+    canClaimPool({ poolAddr: POOL_ADDR, claimedByFacilityId: 'f1', facilityId: 'f2' }),
+    false,
+  );
+});
+
+test('INDEXER · re-running against the same facility is idempotent', () => {
+  // Re-indexing an old PoolCreated must not be treated as a conflict.
+  assert.strictEqual(
+    canClaimPool({ poolAddr: POOL_ADDR, claimedByFacilityId: 'f1', facilityId: 'f1' }),
+    true,
+  );
+});
+
+test('INDEXER · the zero address is never claimable', () => {
+  assert.strictEqual(canClaimPool({ poolAddr: '0x' + '0'.repeat(40), facilityId: 'f1' }), false);
+  assert.strictEqual(canClaimPool({ poolAddr: '', facilityId: 'f1' }), false);
+});

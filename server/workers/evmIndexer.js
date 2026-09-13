@@ -183,10 +183,17 @@ async function tick() {
       // Matched on the borrower's wallet, narrowed to a facility still waiting
       // for its pool, so re-indexing an old event cannot rebind a facility
       // that already has one.
-      await Facility.findOneAndUpdate(
-        { pspWallet, poolPda: '', status: 'AWAITING_POOL_INIT' },
-        { $set: { poolPda: poolAddr, vaultPda: poolAddr, status: 'FUNDING' } }
-      );
+      // One pool belongs to exactly one facility. Without this check a PSP
+      // with two facilities awaiting init gets both bound to the same pool:
+      // the second silently leaves the Initialize Queue, shows someone else's
+      // funding progress, and can never be deployed.
+      const claimant = await Facility.findOne({ poolPda: poolAddr }).select('_id').lean();
+      if (canClaimPool({ poolAddr, claimedByFacilityId: claimant?._id })) {
+        await Facility.findOneAndUpdate(
+          { pspWallet, poolPda: '', status: 'AWAITING_POOL_INIT' },
+          { $set: { poolPda: poolAddr, vaultPda: poolAddr, status: 'FUNDING' } }
+        );
+      }
     }
 
     // 1b. Reconcile facilities whose pool was created outside the event window.
@@ -210,6 +217,11 @@ async function tick() {
         const rec = await factory.psps(fac.pspWallet);
         const activePool = rec?.activePool ?? rec?.[1];
         if (!activePool || activePool === ethers.ZeroAddress) continue;
+        // psps() returns the PSP's one live pool, so every unbound facility of
+        // theirs matches it. Claim it only if no facility holds it already —
+        // otherwise a second facility is hijacked onto the first one's pool.
+        const holder = await Facility.findOne({ poolPda: activePool }).select('_id').lean();
+        if (!canClaimPool({ poolAddr: activePool, claimedByFacilityId: holder?._id, facilityId: fac._id })) continue;
         await Facility.updateOne(
           { _id: fac._id, poolPda: '' },
           { $set: { poolPda: activePool, vaultPda: activePool, status: 'FUNDING' } }
@@ -298,7 +310,24 @@ function stop() {
   }
 }
 
+/**
+ * May this facility claim this pool?
+ *
+ * A pool belongs to exactly one facility. The factory's psps() mapping returns
+ * the PSP's single live pool, so *every* unbound facility of theirs matches it
+ * — bind without checking and a PSP's second facility is hijacked onto the
+ * first one's pool. It then vanishes from the Initialize Queue, displays the
+ * other facility's funding progress, and can never be deployed, with nothing
+ * on screen to explain why.
+ */
+function canClaimPool({ poolAddr, claimedByFacilityId, facilityId }) {
+  if (!poolAddr || /^0x0+$/i.test(poolAddr)) return false;
+  if (!claimedByFacilityId) return true;
+  return String(claimedByFacilityId) === String(facilityId);
+}
+
 module.exports = {
+  canClaimPool,
   start,
   stop,
   tick,           // exported for tests / manual runs
