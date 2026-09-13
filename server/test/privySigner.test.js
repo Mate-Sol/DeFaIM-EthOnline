@@ -86,14 +86,30 @@ test('PRIVY · connect() preserves credentials', () => {
 
 // ── error handling ──────────────────────────────────────────────────────
 
-test('PRIVY · a 403 is marked as a policy denial, not a transport failure', async () => {
+test('PRIVY · a policy denial is recognised even though it returns 400', async () => {
+  // Verified against the live API: Privy answers a forbidden transaction with
+  // 400 "RPC request denied due to policy violation", not 403. Keying off the
+  // status alone files every denial as a transport error and retries it.
   const s = new PrivySigner(BASE);
   const realFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response(JSON.stringify({ error: 'denied by policy' }), { status: 403 });
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ error: 'RPC request denied due to policy violation' }), { status: 400 });
   try {
     await assert.rejects(
       () => s.signTransaction({ to: BASE.address, chainId: 5042002 }),
-      (e) => e.policyDenied === true && /denied by policy/.test(e.message),
+      (e) => e.policyDenied === true && /policy violation/.test(e.message),
+    );
+  } finally { globalThis.fetch = realFetch; }
+});
+
+test('PRIVY · a 403 is also treated as a denial', async () => {
+  const s = new PrivySigner(BASE);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 });
+  try {
+    await assert.rejects(
+      () => s.signTransaction({ to: BASE.address, chainId: 5042002 }),
+      (e) => e.policyDenied === true,
     );
   } finally { globalThis.fetch = realFetch; }
 });
@@ -132,8 +148,12 @@ test('PRIVY · the signed transaction is returned verbatim', async () => {
     const raw = await s.signTransaction({ to: BASE.address, data: '0x1234', chainId: 5042002 });
     assert.strictEqual(raw, '0xdeadbeef');
     assert.strictEqual(seen.method, 'eth_signTransaction');
-    assert.strictEqual(seen.caip2, 'eip155:5042002');
     assert.strictEqual(seen.params.transaction.data, '0x1234');
+    assert.strictEqual(seen.params.transaction.chain_id, 5042002);
+    // eth_signTransaction rejects these outright — the live API answers
+    // "Unrecognized key(s) in object: 'caip2'".
+    assert.ok(!('caip2' in seen), 'caip2 must not be sent');
+    assert.ok(!('chain_type' in seen), 'chain_type must not be sent');
   } finally { globalThis.fetch = realFetch; }
 });
 

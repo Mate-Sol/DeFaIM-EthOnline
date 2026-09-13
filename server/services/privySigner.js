@@ -80,7 +80,11 @@ class PrivySigner extends ethers.AbstractSigner {
       const message = payload?.error || payload?.message || text.slice(0, 200);
       const err = new Error(`Privy ${res.status}: ${message}`);
       err.status = res.status;
-      err.policyDenied = res.status === 403;
+      // Privy returns 400 for a policy violation, not 403, so the status alone
+      // cannot separate a denial from a malformed request — verified against
+      // the live API by signing a transaction the policy forbids.
+      err.policyDenied =
+        res.status === 403 || /policy violation|denied due to policy/i.test(String(message));
       throw err;
     }
     return payload;
@@ -116,12 +120,12 @@ class PrivySigner extends ethers.AbstractSigner {
 
   async signTransaction(tx) {
     const transaction = PrivySigner.toPrivyTransaction(tx);
+    // eth_signTransaction takes only params.transaction — it rejects the
+    // caip2 and chain_type keys that eth_sendTransaction requires, because it
+    // never touches a network. The chain is identified by the transaction's
+    // own chain_id, which is also what the policy matches on.
     const body = {
       method: 'eth_signTransaction',
-      // CAIP-2 identifies the chain for policy evaluation. Arc testnet is
-      // 5042002; Privy does not need to support the chain to scope a rule to it.
-      caip2: `eip155:${transaction.chain_id}`,
-      chain_type: 'ethereum',
       params: { transaction },
     };
     const out = await this._rpc(body);
@@ -168,11 +172,11 @@ class PrivySigner extends ethers.AbstractSigner {
 function agentPolicyDocument({ chainId = 5042002, ownerId } = {}) {
   const policy = {
     version: '1.0',
-    name: 'DeFa agent — contract calls only, no value transfer',
+    name: 'DeFa agent: zero-value calls only',
     chain_type: 'ethereum',
     rules: [
       {
-        name: 'Deny any transaction that moves native value',
+        name: 'Deny native value transfer',
         method: 'eth_signTransaction',
         action: 'DENY',
         conditions: [
@@ -185,7 +189,7 @@ function agentPolicyDocument({ chainId = 5042002, ownerId } = {}) {
         ],
       },
       {
-        name: `Allow zero-value contract calls on eip155:${chainId}`,
+        name: `Allow calls on eip155:${chainId}`,
         method: 'eth_signTransaction',
         action: 'ALLOW',
         conditions: [

@@ -42,3 +42,28 @@ forge script script/Deploy.s.sol:DeployScript \
 ```
 
 Mainnet must be deployed from a freshly generated key.
+
+## Privy — agent key custody
+
+The server's `AGENT2_ROLE` signer is a Privy wallet; the key never reaches the
+application. Signing is policy-gated in Privy's enclave, and we broadcast the
+signed transaction through Arc's RPC ourselves — Arc is not in Privy's
+supported-chain list, so `eth_sendTransaction` is unavailable while
+`eth_signTransaction` accepts any chain id.
+
+| | |
+|---|---|
+| App ID | `cmtzqiu8o00ne0cjqzmgytehl` |
+| Policy ID | `ag9rjg3hb4tsqa53olh9cnof` |
+| Wallet ID | `vehlch77z8mdqnpcvgkn8lqy` |
+| Agent address | `0xCA49ED8f57Df6445cF142c84d0AD8b09Bb289B81` |
+
+The policy denies any transaction carrying native value. On Arc, USDC *is* the
+native token, so value is money leaving the wallet; every legitimate agent
+action is a zero-value contract call. Verified against the live API — a
+zero-value call signs, a value transfer is refused with
+`RPC request denied due to policy violation`.
+
+**This address needs `AGENT2_ROLE` (and `AGENT1_ROLE`) granted on each pool.**
+Roles are fixed at `createPool()`, so pools created before the switch keep the
+previous agent and continue to use the local key.
