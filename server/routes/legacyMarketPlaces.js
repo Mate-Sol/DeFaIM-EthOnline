@@ -109,9 +109,43 @@ async function facilityForPool(poolAddress) {
   }
 }
 
+/**
+ * Rebuild the state shape from the indexed row, so the marketplace listing
+ * does not read every pool from the chain.
+ *
+ * readPoolState() is ~25 view calls. Multiplied across the whole book that is
+ * several hundred RPC calls for one page load — the listing went past two
+ * minutes and the lender marketplace simply never finished loading. The
+ * indexer refreshes every pool every 30 seconds, which is fresher than a
+ * marketplace listing needs to be.
+ */
+function stateFromDoc(d) {
+  const big = (v) => { try { return BigInt(v ?? 0); } catch { return 0n; } };
+  return {
+    poolAddress:     d.pubkey,
+    status:          Number(d.status ?? 0),
+    pspWallet:       d.pspWallet,
+    softCap:         big(d.softCap),
+    hardCap:         big(d.hardCap),
+    tenure:          BigInt(d.facilityTenorDays ?? 0),
+    // The indexer stores rates as basis points; wadToBps() downstream expects
+    // WAD, so convert back rather than reporting a rate 1e14 times too small.
+    aprAnnual:       BigInt(Math.round(Number(d.aprAnnualBps ?? 0) * 1e14)),
+    principal:       big(d.totalCapital),
+    outstanding:     big(d.outstandingPrincipal),
+    availableToDd:   big(d.availableToDd),
+    yieldOwed:       big(d.yieldOwed),
+    fundingStartTs:  big(d.fundingStartTs),
+    poolStartTs:     big(d.poolStartTs),
+    poolFinalityTs:  big(d.poolFinalityTs),
+    fMaturityTs:     big(d.fMaturityTs),
+  };
+}
+
 async function mapPoolToDeal(poolAddress) {
-  const state = await svc.readPoolState(poolAddress);
   const mongoDoc = await PoolState.findOne({ pubkey: poolAddress }).lean();
+  // Only fall back to the chain for a pool the indexer has never recorded.
+  const state = mongoDoc ? stateFromDoc(mongoDoc) : await svc.readPoolState(poolAddress);
   const facility = await facilityForPool(poolAddress);
   const psp = facility?.pspProfileId || null;
   const aprBps = wadToBps(state.aprAnnual);
