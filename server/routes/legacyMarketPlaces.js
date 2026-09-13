@@ -144,8 +144,11 @@ function stateFromDoc(d) {
 
 async function mapPoolToDeal(poolAddress) {
   const mongoDoc = await PoolState.findOne({ pubkey: poolAddress }).lean();
-  // Only fall back to the chain for a pool the indexer has never recorded.
-  const state = mongoDoc ? stateFromDoc(mongoDoc) : await svc.readPoolState(poolAddress);
+  // Never read the chain here. A handful of unindexed pools is enough to put
+  // this listing over a minute — 25 view calls each, paced by the RPC
+  // throttle — and the marketplace is the first page a visitor sees. An
+  // unindexed pool renders with zeroes and fills in on the next 30s tick.
+  const state = stateFromDoc(mongoDoc || { pubkey: poolAddress });
   const facility = await facilityForPool(poolAddress);
   const psp = facility?.pspProfileId || null;
   const aprBps = wadToBps(state.aprAnnual);
