@@ -35,7 +35,8 @@ const PSPProfile = require('../models/PSPProfile');
 const User = require('../models/User');
 const Facility = require('../models/Facility');
 const svc = require('../services/poolServiceEvm');
-const { getProvider, getFactoryAddress, isOnchainAdmin } = require('../config/chain');
+const chain = require('../config/chain');
+const { getProvider, getFactoryAddress, isOnchainAdmin } = chain;
 const { PoolState, DrawdownState } = require('../models/PoolState');
 const PoolNameOverride = require('../models/PoolNameOverride');
 
@@ -261,11 +262,15 @@ async function loadOwnedFacility(req, res, profile) {
   return facility;
 }
 
-// Address the server itself signs from (AGENT1 + AGENT2 default). Nulled
-// if AGENT_PRIVATE_KEY isn't set; init-pool then requires explicit agents.
-const AGENT_ADDRESS_FALLBACK = process.env.AGENT_PRIVATE_KEY
-  ? new ethers.Wallet(process.env.AGENT_PRIVATE_KEY).address
-  : null;
+// Address the server itself signs from (AGENT1 + AGENT2 default). Nulled if
+// no signer is configured; init-pool then requires explicit agents.
+//
+// Resolved through getAgentAddress() rather than from AGENT_PRIVATE_KEY
+// directly: the agent roles are baked into each pool at createPool() time and
+// cannot be changed afterwards, so reading the wrong address here would mint
+// pools whose drawdowns the server can never sign — discoverable only at the
+// first drawdown, once the facility is already funded.
+const AGENT_ADDRESS_FALLBACK = chain.getAgentAddress() || null;
 
 // ══════════════════════════════════════════════════════════════════════
 // ── Lender build-tx endpoints ─────────────────────────────────────────
