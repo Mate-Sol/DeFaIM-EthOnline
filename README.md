@@ -36,11 +36,15 @@ Defaults settle from a treasury reserve.
 facility. Settlement in native USDC. Validation gates enforced on-chain, so release is a
 conditional, multi-step operation rather than a trusted backend call.
 
-**The Graph (data).** A Subgraph indexes pool events — deposits, drawdowns, repayments,
-payout attestations — exposing facility state as a queryable, ERC-4626-shaped vault feed.
+**The Graph (data).** A Subgraph indexes both factories and, by template, every pool
+clone they deploy — deposits and withdrawals in the ERC-4626 event shape, drawdowns,
+repayments with their finance charge, and lender yield and principal claims — exposing
+facility state as a queryable vault feed.
 
-**Privy (accounts and approval).** Organization wallets for LP and borrower onboarding,
-with policy- and quorum-gated approval on drawdown release.
+**Wallets.** Lenders and borrowers connect an EOA through RainbowKit/wagmi and prove
+ownership with a SIWE signature; that bound wallet is stamped into the pool as the
+borrower and is the only address the contract accepts repayment from. Drawdown release
+is gated on-chain by `AGENT2_ROLE` rather than by a backend check.
 
 ## Repository layout
 
@@ -49,7 +53,6 @@ contracts/   Foundry — pool, factory, treasury reserve
 server/      Node + Express + Mongoose — API, indexer, transaction builders
 web/         Lender and borrower interfaces
 subgraph/    The Graph — schema, manifest, mappings
-agent/       Risk monitor querying the Subgraph
 docs/        Architecture, contracts, API, repayment logic
 ```
 
