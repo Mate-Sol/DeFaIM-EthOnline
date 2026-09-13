@@ -80,14 +80,62 @@ function getStablecoinAddress() {
   return STABLECOIN_ADDRESS;
 }
 
+// Privy-backed agent signing. When these are set the server never holds the
+// agent key: signing happens in Privy's enclave, under a policy, and we only
+// broadcast the result. Falls back to the local key when unset so existing
+// deployments and the test suite keep working.
+const PRIVY_APP_ID     = process.env.PRIVY_APP_ID || '';
+const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET || '';
+const PRIVY_WALLET_ID  = process.env.PRIVY_WALLET_ID || '';
+const PRIVY_WALLET_ADDRESS = process.env.PRIVY_WALLET_ADDRESS || '';
+const PRIVY_AUTHORIZATION_KEY = process.env.PRIVY_AUTHORIZATION_KEY || '';
+
+function usingPrivyAgent() {
+  return Boolean(PRIVY_APP_ID && PRIVY_APP_SECRET && PRIVY_WALLET_ID && PRIVY_WALLET_ADDRESS);
+}
+
+let _privySigner = null;
+
 function getAgentSigner() {
+  if (usingPrivyAgent()) {
+    if (!_privySigner) {
+      // Required lazily: the module pulls in fetch-based code that has no
+      // business loading when the local-key path is in use.
+      const { PrivySigner } = require('../services/privySigner');
+      _privySigner = new PrivySigner({
+        appId: PRIVY_APP_ID,
+        appSecret: PRIVY_APP_SECRET,
+        walletId: PRIVY_WALLET_ID,
+        address: PRIVY_WALLET_ADDRESS,
+        authorizationKey: PRIVY_AUTHORIZATION_KEY,
+        provider,
+      });
+    }
+    return _privySigner;
+  }
+
   if (!AGENT_PRIVATE_KEY) {
     throw new Error(
-      'AGENT_PRIVATE_KEY not set — this key holds AGENT2_ROLE and is required ' +
-      'to sign drawdowns on the PSP\'s behalf. Rotate before going public.'
+      'No agent signer configured — set PRIVY_APP_ID / PRIVY_APP_SECRET / ' +
+      'PRIVY_WALLET_ID / PRIVY_WALLET_ADDRESS to sign through Privy, or ' +
+      'AGENT_PRIVATE_KEY to sign locally. This signer holds AGENT2_ROLE and is ' +
+      'required to execute drawdowns on the PSP\'s behalf.'
     );
   }
   return new ethers.Wallet(AGENT_PRIVATE_KEY, provider);
+}
+
+/**
+ * The address holding AGENT2_ROLE, whichever backend signs for it.
+ *
+ * Switching to Privy changes this address, and the role must be granted to the
+ * new one on-chain before drawdowns will work — the contract checks the role,
+ * not the intent.
+ */
+function getAgentAddress() {
+  if (usingPrivyAgent()) return ethers.getAddress(PRIVY_WALLET_ADDRESS);
+  if (!AGENT_PRIVATE_KEY) return '';
+  return new ethers.Wallet(AGENT_PRIVATE_KEY).address;
 }
 
 function getFaucetSigner() {
@@ -104,6 +152,8 @@ function isOnchainAdmin(addr) {
 }
 
 module.exports = {
+  usingPrivyAgent,
+  getAgentAddress,
   CHAIN_ID,
   RPC_URL,
   getProvider,

@@ -47,6 +47,24 @@ of our own: `Deposit` and `Withdrawal` carry the standard `sender` / `owner` /
 4626 vaults, with no protocol-specific knowledge — a credit facility presented
 through the same interface as a yield vault.
 
+**Privy (agent key custody).** The server holds `AGENT2_ROLE`, which lets it call
+`executeDrawdown()` — the one server-side authority that moves lender capital to a
+borrower. That authority was a raw private key in an environment variable: anything
+that could read the environment could sign as the agent, from anywhere, forever.
+
+It is now a Privy server wallet. The key lives in Privy's enclave and never reaches
+this process; the server asks for a signature and a **policy** attached to the wallet
+decides whether to give one. The policy denies any transaction carrying native value —
+on Arc, USDC *is* the native token, so value is money leaving the wallet, and every
+legitimate agent action is a zero-value contract call. Compromising the server yields
+the ability to *request* a signature for a contract call, not to take the key or move
+funds.
+
+Arc is not in Privy's supported-chain list, so we sign with Privy and broadcast
+through our own Arc RPC — `eth_signTransaction` accepts an arbitrary chain id.
+Provision with `node scripts/privy-setup.js`; the signer falls back to a local key
+when the Privy variables are unset.
+
 **Risk monitor (`agent/`).** The Subgraph is not only displayed, it is reasoned
 over. The monitor reads live facility state and decides what a human needs to
 look at: drawdowns past their grace window accruing uncapped penalties,
